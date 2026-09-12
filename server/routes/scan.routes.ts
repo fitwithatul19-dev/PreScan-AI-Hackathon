@@ -103,7 +103,7 @@ router.post('/youtube/validate', requireAuth, async (req: Request, res: Response
 router.post(
   '/upload',
   requireAuth,
-  upload.single('file'),
+  upload.single('file') as any,
   async (req: Request, res: Response) => {
     try {
       const user = req.user!;

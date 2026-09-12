@@ -29,7 +29,23 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
     try {
       setGoogleLoading(true);
       setError(null);
-      await loginWithGoogle();
+
+      const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+      const inIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: callbackUrl,
+          skipBrowserRedirect: inIframe,
+        },
+      });
+
+      if (oauthError) throw oauthError;
+
+      if (inIframe && data?.url) {
+        window.open(data.url, '_blank');
+      }
     } catch (err: any) {
       setError(err?.message || 'Unable to sign up with Google. Please try again.');
     } finally {

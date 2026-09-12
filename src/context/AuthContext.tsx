@@ -251,15 +251,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const loginWithGoogle = async (): Promise<void> => {
-    const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
-    const { error } = await supabase.auth.signInWithOAuth({
+    const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+    const inIframe = typeof window !== 'undefined' && window.self !== window.top;
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: callbackUrl,
+        skipBrowserRedirect: inIframe,
       },
     });
     if (error) {
       throw error;
+    }
+    if (inIframe && data?.url) {
+      window.open(data.url, '_blank');
     }
   };
 

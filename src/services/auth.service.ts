@@ -1,6 +1,7 @@
 import { IAuthService, SignInCredentials, SignUpData } from './auth.interface';
 import { User, Organization, MembershipRole } from '../types';
 import { apiFetch, setStoredToken } from '../lib/api';
+import { supabase } from '../supabaseClient';
 
 export function getAppRedirectUrl(targetPath: string = ''): string {
   let baseUrl = '';
@@ -211,8 +212,19 @@ export class AuthService implements IAuthService {
   }
 
   async signInWithGoogle(): Promise<void> {
-    console.log('[Google OAuth] Google authentication is not currently connected to a backend provider.');
-    throw new Error('Google sign-in is not configured. Please sign in with email.');
+    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+    const inIframe = typeof window !== 'undefined' && window.self !== window.top;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: inIframe,
+      },
+    });
+    if (error) throw error;
+    if (inIframe && data?.url) {
+      window.open(data.url, '_blank');
+    }
   }
 
   async signIn(credentials: SignInCredentials): Promise<User> {
