@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../router/routes';
-import { supabase } from '../supabaseClient';
+import { supabase, signInWithGoogle } from '../supabaseClient';
 
 interface SignupPageProps {
   onNavigate: (route: string) => void;
@@ -29,23 +29,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
     try {
       setGoogleLoading(true);
       setError(null);
-
-      const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
-      const inIframe = typeof window !== 'undefined' && window.self !== window.top;
-
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: callbackUrl,
-          skipBrowserRedirect: inIframe,
-        },
-      });
-
-      if (oauthError) throw oauthError;
-
-      if (inIframe && data?.url) {
-        window.open(data.url, '_blank');
-      }
+      await signInWithGoogle();
     } catch (err: any) {
       setError(err?.message || 'Unable to sign up with Google. Please try again.');
     } finally {
@@ -94,11 +78,6 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          data: {
-            full_name: fullName.trim() || undefined,
-          },
-        },
       });
 
       if (signUpError) {
@@ -106,12 +85,17 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
         return;
       }
 
-      // When user signs up:
-      // Redirect immediately to the Login page (/login) with email prefilled, password blank,
-      // and banner notice: "Your account has been created. Please check your email and verify your address before logging in."
-      const registeredEmail = encodeURIComponent(email.trim());
-      const message = encodeURIComponent('Your account has been created. Please check your email and verify your address before logging in.');
-      onNavigate(`${ROUTES.LOGIN}?email=${registeredEmail}&registered=true&msg=${message}`);
+      // Do NOT auto-login. Ensure any automatic session is cleared.
+      if (data?.session) {
+        await supabase.auth.signOut();
+      }
+
+      // Redirect to Sign In page with email pre-filled and registered status
+      const encodedEmail = encodeURIComponent(email.trim());
+      const encodedMsg = encodeURIComponent(
+        'Your account has been created. Please check your email and verify your address before logging in.'
+      );
+      onNavigate(`${ROUTES.LOGIN}?email=${encodedEmail}&registered=true&msg=${encodedMsg}`);
     } catch (err: any) {
       setError(err?.message || 'Failed to create your account.');
     } finally {

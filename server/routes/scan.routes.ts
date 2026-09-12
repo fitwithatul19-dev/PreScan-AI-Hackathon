@@ -53,6 +53,7 @@ const upload = multer({
 function getTargetOrganizationId(req: Request): string | null {
   const headerOrgId = (req.headers['x-workspace-id'] || req.headers['x-organization-id']) as string;
   if (headerOrgId && headerOrgId.trim()) return headerOrgId.trim();
+  if (req.workspace?.id) return req.workspace.id;
   const user = req.user;
   if (!user) return null;
   if (user.defaultOrganizationId) return user.defaultOrganizationId;

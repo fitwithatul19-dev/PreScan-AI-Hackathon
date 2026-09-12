@@ -16,33 +16,59 @@ declare global {
 }
 
 // Supabase server-side client configuration
-const SUPABASE_URL = (
+const DEFAULT_SUPABASE_URL = (
   process.env.SUPABASE_URL ||
   process.env.VITE_SUPABASE_URL ||
-  'https://pfoabzazqeriydhkqizr.supabase.co'
+  'https://gwegvhrsssshxfrnwolb.supabase.co'
 ).trim();
 
-const SUPABASE_KEY = (
+const DEFAULT_SUPABASE_KEY = (
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_ANON_KEY ||
   process.env.SUPABASE_KEY ||
   process.env.VITE_SUPABASE_PUBLIC_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
-  'sb_publishable_IyoKj6gJLQ7XISQOghMp-Q_gxyd7t03'
+  'sb_publishable_6pNiNIoMRT17m8DnYdw1Tw_xBS6sb8Z'
 ).trim();
 
-let supabaseServerClient: SupabaseClient | null = null;
+// Map of created Supabase clients keyed by project URL to support dynamic project matching
+const supabaseClientCache = new Map<string, SupabaseClient>();
 
-export function getSupabaseServerClient(): SupabaseClient {
-  if (!supabaseServerClient) {
-    supabaseServerClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
+export function getSupabaseServerClient(customUrl?: string, customKey?: string): SupabaseClient {
+  const targetUrl = (customUrl || DEFAULT_SUPABASE_URL).trim();
+  const targetKey = (customKey || (targetUrl === DEFAULT_SUPABASE_URL ? DEFAULT_SUPABASE_KEY : (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY))).trim();
+
+  const cacheKey = `${targetUrl}:::${targetKey}`;
+  let client = supabaseClientCache.get(cacheKey);
+  if (!client) {
+    client = createClient(targetUrl, targetKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
       },
     });
+    supabaseClientCache.set(cacheKey, client);
   }
-  return supabaseServerClient;
+  return client;
+}
+
+/**
+ * Extract the issuer URL from a JWT payload safely without verifying signature
+ */
+function extractJwtIssuerUrl(jwtToken: string): string | null {
+  try {
+    const parts = jwtToken.split('.');
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonStr = Buffer.from(base64, 'base64').toString('utf8');
+    const payload = JSON.parse(jsonStr);
+    if (payload?.iss && typeof payload.iss === 'string') {
+      return payload.iss.replace(/\/auth\/v1\/?$/, '').trim();
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
 }
 
 /**
@@ -316,8 +342,20 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     const looksLikeJwt = token.includes('.') && token.split('.').length === 3;
     if (looksLikeJwt) {
       try {
-        const supabase = getSupabaseServerClient();
-        const { data, error } = await supabase.auth.getUser(token);
+        const issuerUrl = extractJwtIssuerUrl(token);
+        let supabase = getSupabaseServerClient(issuerUrl || undefined);
+        let { data, error } = await supabase.auth.getUser(token);
+
+        // Fallback: if issuer-matched client failed and a different default project is configured, try default client
+        if ((error || !data?.user) && issuerUrl && issuerUrl !== DEFAULT_SUPABASE_URL) {
+          const fallbackClient = getSupabaseServerClient(DEFAULT_SUPABASE_URL);
+          const fallbackRes = await fallbackClient.auth.getUser(token);
+          if (!fallbackRes.error && fallbackRes.data?.user) {
+            data = fallbackRes.data;
+            error = null;
+            supabase = fallbackClient;
+          }
+        }
 
         if (!error && data?.user) {
           const sbUser = data.user;
@@ -593,6 +631,8 @@ export function getWorkspaceContext(req: Request): string | undefined {
 
   const bodyWsId = req.body?.workspaceId || req.body?.orgId || req.body?.organizationId;
   if (bodyWsId && typeof bodyWsId === 'string' && bodyWsId.trim()) return bodyWsId.trim();
+
+  if (req.workspace?.id) return req.workspace.id;
 
   return req.user?.defaultOrganizationId;
 }

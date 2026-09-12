@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../router/routes';
-import { supabase } from '../supabaseClient';
+import { supabase, signInWithGoogle } from '../supabaseClient';
 
 interface LoginPageProps {
   onNavigate: (route: string) => void;
@@ -51,23 +51,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, initialEmail, 
     try {
       setGoogleLoading(true);
       setError(null);
-
-      const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
-      const inIframe = typeof window !== 'undefined' && window.self !== window.top;
-
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: callbackUrl,
-          skipBrowserRedirect: inIframe,
-        },
-      });
-
-      if (oauthError) throw oauthError;
-
-      if (inIframe && data?.url) {
-        window.open(data.url, '_blank');
-      }
+      await signInWithGoogle();
     } catch (err: any) {
       setError(err?.message || 'Unable to sign in with Google. Please try again.');
     } finally {
@@ -86,18 +70,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, initialEmail, 
       setLoading(true);
       setError(null);
 
-      const res = await login({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
-      if (returnTo && returnTo.startsWith('/app')) {
-        onNavigate(returnTo);
-      } else if (res.isCompleted) {
-        onNavigate(ROUTES.DASHBOARD);
-      } else {
-        onNavigate(ROUTES.ONBOARDING);
+      if (signInError) {
+        setError(signInError.message || 'Invalid email or password');
+        return;
       }
+
+      // Check if real session exists
+      let session = data?.session;
+      if (!session) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        session = sessionData?.session;
+      }
+
+      if (!session) {
+        setError('Check your email and confirm your account before logging in.');
+        return;
+      }
+
+      window.location.href = '/';
     } catch (err: any) {
       setError(err?.message || 'Unable to sign in. Please check your credentials and try again.');
     } finally {

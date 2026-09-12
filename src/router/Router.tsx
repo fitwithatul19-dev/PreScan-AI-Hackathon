@@ -38,6 +38,71 @@ import { AcceptInvitationPage } from '../pages/AcceptInvitationPage';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
+/**
+ * ProtectedRoute: Enforces active Supabase session via supabase.auth.getSession().
+ * If no session exists, it redirects the user to /login.
+ */
+function ProtectedRoute({
+  children,
+  onNavigate,
+  currentRoute,
+}: {
+  children: React.ReactNode;
+  onNavigate: (route: string) => void;
+  currentRoute: string;
+}) {
+  const [checking, setChecking] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    supabase.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        if (!isMounted) return;
+        if (error || !session) {
+          setHasSession(false);
+          onNavigate(ROUTES.LOGIN);
+        } else {
+          setHasSession(true);
+        }
+        setChecking(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setHasSession(false);
+        onNavigate(ROUTES.LOGIN);
+        setChecking(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentRoute, onNavigate]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex flex-col justify-center items-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-bold text-base shadow-sm">
+            <Sparkles className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
+            <Loader2 className="w-4 h-4 animate-spin text-neutral-600" />
+            <span>Verifying session...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasSession) {
+    return <LoginPage onNavigate={onNavigate} returnTo={currentRoute} />;
+  }
+
+  return <>{children}</>;
+}
+
 export const Router: React.FC = () => {
   const { authStatus, isLoading } = useAuth();
 
@@ -93,6 +158,18 @@ export const Router: React.FC = () => {
 
   // Extract base route path without query params or hash fragment for matching
   const routePath = currentRoute.split('?')[0].split('#')[0];
+
+  // Protect private pages with supabase.auth.getSession() — if no session, redirect to /login
+  useEffect(() => {
+    const isPrivate = routePath.startsWith('/app') || routePath === ROUTES.ONBOARDING;
+    if (isPrivate) {
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error || !session) {
+          navigate(ROUTES.LOGIN);
+        }
+      });
+    }
+  }, [routePath]);
 
   // Auto-route authenticated users when they land on root or auth routes
   useEffect(() => {
@@ -269,9 +346,6 @@ export const Router: React.FC = () => {
   }
 
   if (routePath === ROUTES.ONBOARDING) {
-    if (authStatus === 'UNAUTHENTICATED') {
-      return <LoginPage onNavigate={navigate} returnTo={ROUTES.ONBOARDING} />;
-    }
     if (authStatus === 'AUTHENTICATED_READY') {
       return (
         <AppShell currentRoute={ROUTES.DASHBOARD} onNavigate={navigate}>
@@ -279,20 +353,15 @@ export const Router: React.FC = () => {
         </AppShell>
       );
     }
-    return <OnboardingPage onNavigate={navigate} />;
+    return (
+      <ProtectedRoute onNavigate={navigate} currentRoute={currentRoute}>
+        <OnboardingPage onNavigate={navigate} />
+      </ProtectedRoute>
+    );
   }
 
   // 3. Protected Application Shell Routes (/app/*)
   if (routePath.startsWith('/app')) {
-    // If not authenticated, redirect to Login
-    if (authStatus === 'UNAUTHENTICATED') {
-      return <LoginPage onNavigate={navigate} returnTo={currentRoute} />;
-    }
-    // If onboarding incomplete, redirect to Onboarding
-    if (authStatus === 'AUTHENTICATED_ONBOARDING' || authStatus === 'AUTHENTICATED_UNVERIFIED') {
-      return <OnboardingPage onNavigate={navigate} />;
-    }
-
     // Authenticated Ready Shell Rendering
     const renderAppContent = () => {
       // Dynamic scan detail route check: /app/scans/:id
@@ -329,9 +398,15 @@ export const Router: React.FC = () => {
     };
 
     return (
-      <AppShell currentRoute={currentRoute} onNavigate={navigate}>
-        {renderAppContent()}
-      </AppShell>
+      <ProtectedRoute onNavigate={navigate} currentRoute={currentRoute}>
+        {authStatus === 'AUTHENTICATED_ONBOARDING' || authStatus === 'AUTHENTICATED_UNVERIFIED' ? (
+          <OnboardingPage onNavigate={navigate} />
+        ) : (
+          <AppShell currentRoute={currentRoute} onNavigate={navigate}>
+            {renderAppContent()}
+          </AppShell>
+        )}
+      </ProtectedRoute>
     );
   }
 
