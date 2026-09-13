@@ -6,8 +6,6 @@ import {
   FileCheck2,
   FolderKanban,
   Users2,
-  Plug2,
-  CreditCard,
   Settings,
   Sparkles,
   Palette,
@@ -78,19 +76,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Team & Access',
       href: '/app/team',
       icon: <Users2 className="w-4 h-4" />,
-    },
-    {
-      id: 'integrations',
-      label: 'Integrations',
-      href: '/app/integrations',
-      icon: <Plug2 className="w-4 h-4" />,
-      badge: 'YouTube',
-    },
-    {
-      id: 'billing',
-      label: 'Billing & Plans',
-      href: '/app/billing',
-      icon: <CreditCard className="w-4 h-4" />,
     },
     {
       id: 'settings',

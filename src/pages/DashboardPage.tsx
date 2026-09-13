@@ -131,7 +131,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-neutral-200 bg-white shadow-2xs">
         <div>
           <h3 className="text-sm font-bold text-neutral-900">Start a New QA Review</h3>
-          <p className="text-xs text-neutral-500">Upload a video or audio file or analyze a YouTube link before publishing.</p>
+          <p className="text-xs text-neutral-500">Upload a video or audio file to inspect potential policy and compliance risks.</p>
         </div>
         <div className="flex items-center gap-2.5">
           <Button
@@ -177,29 +177,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-mono font-semibold text-neutral-400 uppercase">
-                    {scan.sourceType === 'youtube_url' ? 'YouTube' : 'Upload'}
+                    {scan.mediaInfo?.format || 'Media File'}
                   </span>
                   {renderStatusBadge(scan.status)}
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  {scan.sourceType === 'youtube_url' ? (
-                    <div className="relative w-14 aspect-video rounded bg-neutral-900 shrink-0 overflow-hidden border border-neutral-200">
-                      <img
-                        src={
-                          scan.mediaInfo?.thumbnailUrl ||
-                          `https://img.youtube.com/vi/${scan.mediaInfo?.youtubeVideoId}/hqdefault.jpg`
-                        }
-                        alt=""
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-700 shrink-0">
-                      <FileVideo className="w-4 h-4" />
-                    </div>
-                  )}
+                  <div className="w-9 h-9 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-700 shrink-0">
+                    <FileVideo className="w-4 h-4" />
+                  </div>
 
                   <div className="overflow-hidden">
                     <p className="text-xs font-bold text-neutral-900 truncate">

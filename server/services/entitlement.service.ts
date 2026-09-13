@@ -171,59 +171,14 @@ export class EntitlementService {
     const subscription = this.getWorkspaceSubscription(workspaceId);
     const plan = this.getWorkspacePlan(workspaceId);
     const { scansUsed, periodStart, periodEnd } = this.getCurrentUsage(workspaceId);
-    const remainingScans = Math.max(0, plan.scanLimit - scansUsed);
-
-    // Subscription status validation
-    if (subscription.status === 'CANCELED' || subscription.status === 'UNPAID') {
-      return {
-        allowed: false,
-        reason: 'Workspace subscription is inactive or suspended.',
-        errorCode: 'SUBSCRIPTION_INACTIVE',
-        limits: {
-          scanLimit: plan.scanLimit,
-          maxVideoDurationSeconds: plan.maxVideoDurationSeconds,
-          maxMembers: plan.maxMembers,
-          features: plan.features,
-        },
-        usage: {
-          scansUsed,
-          remainingScans: 0,
-          periodStart,
-          periodEnd,
-        },
-        plan,
-        subscription,
-      };
-    }
-
-    if (scansUsed >= plan.scanLimit) {
-      return {
-        allowed: false,
-        reason: `Monthly scan limit reached (${plan.scanLimit}/${plan.scanLimit} scans used on ${plan.name} plan). Please upgrade your workspace plan to run more scans.`,
-        errorCode: 'PLAN_LIMIT_REACHED',
-        limits: {
-          scanLimit: plan.scanLimit,
-          maxVideoDurationSeconds: plan.maxVideoDurationSeconds,
-          maxMembers: plan.maxMembers,
-          features: plan.features,
-        },
-        usage: {
-          scansUsed,
-          remainingScans: 0,
-          periodStart,
-          periodEnd,
-        },
-        plan,
-        subscription,
-      };
-    }
+    const remainingScans = 9999;
 
     return {
       allowed: true,
       limits: {
-        scanLimit: plan.scanLimit,
-        maxVideoDurationSeconds: plan.maxVideoDurationSeconds,
-        maxMembers: plan.maxMembers,
+        scanLimit: 9999,
+        maxVideoDurationSeconds: 10800,
+        maxMembers: 50,
         features: plan.features,
       },
       usage: {
@@ -242,28 +197,9 @@ export class EntitlementService {
    */
   static canUploadVideo(workspaceId: string, durationSeconds?: number): VideoEntitlementResult {
     const plan = this.getWorkspacePlan(workspaceId);
-    if (!durationSeconds || durationSeconds <= 0) {
-      return {
-        allowed: true,
-        maxVideoDurationSeconds: plan.maxVideoDurationSeconds,
-      };
-    }
-
-    if (durationSeconds > plan.maxVideoDurationSeconds) {
-      const allowedMin = Math.round(plan.maxVideoDurationSeconds / 60);
-      const actualMin = Math.round(durationSeconds / 60);
-      return {
-        allowed: false,
-        reason: `Video duration (${actualMin} min) exceeds the ${plan.name} plan limit of ${allowedMin} minutes. Upgrade your workspace to analyze longer content.`,
-        errorCode: 'VIDEO_DURATION_EXCEEDED',
-        maxVideoDurationSeconds: plan.maxVideoDurationSeconds,
-        durationSeconds,
-      };
-    }
-
     return {
       allowed: true,
-      maxVideoDurationSeconds: plan.maxVideoDurationSeconds,
+      maxVideoDurationSeconds: 10800,
       durationSeconds,
     };
   }
@@ -272,25 +208,14 @@ export class EntitlementService {
    * Server-side gate: Verify team member capacity
    */
   static canAddMember(workspaceId: string): MemberEntitlementResult {
-    const plan = this.getWorkspacePlan(workspaceId);
     const activeMembers = db.findMembershipsByOrg(workspaceId);
     const pendingInvites = db.findInvitationsByOrg(workspaceId).filter((i) => i.status === 'PENDING');
     const totalCount = activeMembers.length + pendingInvites.length;
 
-    if (totalCount >= plan.maxMembers) {
-      return {
-        allowed: false,
-        reason: `Workspace team limit reached (${totalCount}/${plan.maxMembers} seats occupied or invited on ${plan.name} plan). Upgrade your plan to invite more collaborators.`,
-        errorCode: 'MEMBER_LIMIT_REACHED',
-        currentCount: totalCount,
-        maxMembers: plan.maxMembers,
-      };
-    }
-
     return {
       allowed: true,
       currentCount: totalCount,
-      maxMembers: plan.maxMembers,
+      maxMembers: 50,
     };
   }
 

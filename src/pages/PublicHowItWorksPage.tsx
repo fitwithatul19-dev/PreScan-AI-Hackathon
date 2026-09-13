@@ -29,14 +29,14 @@ export const PublicHowItWorksPage: React.FC<PublicHowItWorksPageProps> = ({ onNa
   const steps = [
     {
       num: '01',
-      title: 'Add your video',
-      subtitle: 'Start with a file, a YouTube link, or your connected channel',
+      title: 'Upload your media file',
+      subtitle: 'Upload your exported video or audio file directly',
       details:
-        'Choose the workflow that fits your setup: upload an exported video/audio file, paste a public or unlisted YouTube video URL, or connect your channel for direct draft selection. PreScan extracts the audio stream for heuristic review.',
+        'Upload an exported video or audio file (MP4, MOV, MP3, WAV). PreScan isolates and extracts the audio stream for transcription and heuristic review.',
       points: [
-        'Direct file upload (MP4, MOV, MP3, WAV)',
-        'YouTube video link support (watch, youtu.be, shorts)',
-        'Channel workspace integration (upcoming)',
+        'Direct video file upload (MP4, MOV, WebM)',
+        'Direct audio file upload (MP3, WAV, M4A)',
+        'Fast and isolated tenant processing',
       ],
       icon: <UploadCloud className="w-6 h-6 text-neutral-900" />,
     },

@@ -212,7 +212,7 @@ export const ScansPage: React.FC<ScansPageProps> = ({ onNavigate }) => {
             description={
               searchQuery || statusFilter !== 'ALL'
                 ? 'Try adjusting your search query or status filter to locate existing scan records.'
-                : 'Your workspace repository will record ingested media files, YouTube URLs, and compliance records as you create scans.'
+                : 'Your workspace repository will record ingested media files and compliance records as you create scans.'
             }
             primaryAction={{
               label: '+ Run First PreScan',
@@ -231,26 +231,9 @@ export const ScansPage: React.FC<ScansPageProps> = ({ onNavigate }) => {
             >
               {/* Media Thumbnail / Icon & Details */}
               <div className="flex items-center gap-3.5 overflow-hidden flex-1">
-                {scan.sourceType === 'youtube_url' ? (
-                  <div className="relative w-24 sm:w-28 aspect-video rounded-lg overflow-hidden bg-neutral-900 shrink-0 border border-neutral-200 shadow-2xs">
-                    <img
-                      src={
-                        scan.mediaInfo?.thumbnailUrl ||
-                        `https://img.youtube.com/vi/${scan.mediaInfo?.youtubeVideoId}/hqdefault.jpg`
-                      }
-                      alt={scan.title}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/80 text-white font-mono text-[8px] font-bold">
-                      YT
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-800 shrink-0 shadow-2xs">
-                    <FileVideo className="w-6 h-6" />
-                  </div>
-                )}
+                <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-800 shrink-0 shadow-2xs">
+                  <FileVideo className="w-6 h-6" />
+                </div>
 
                 <div className="overflow-hidden space-y-1">
                   <div className="flex items-center gap-2">

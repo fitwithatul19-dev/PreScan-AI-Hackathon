@@ -10,8 +10,6 @@ import { ScanDetailPage } from '../pages/ScanDetailPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { ProjectsPage } from '../pages/ProjectsPage';
 import { TeamPage } from '../pages/TeamPage';
-import { IntegrationsPage } from '../pages/IntegrationsPage';
-import { BillingPage } from '../pages/BillingPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { DesignSystemPage } from '../pages/DesignSystemPage';
 
@@ -19,7 +17,6 @@ import { DesignSystemPage } from '../pages/DesignSystemPage';
 import { PublicLandingPage } from '../pages/PublicLandingPage';
 import { PublicFeaturesPage } from '../pages/PublicFeaturesPage';
 import { PublicHowItWorksPage } from '../pages/PublicHowItWorksPage';
-import { PublicPricingPage } from '../pages/PublicPricingPage';
 import { PublicSecurityPage } from '../pages/PublicSecurityPage';
 import { PublicAboutPage } from '../pages/PublicAboutPage';
 import { PublicContactPage } from '../pages/PublicContactPage';
@@ -260,9 +257,6 @@ export const Router: React.FC = () => {
   if (routePath === ROUTES.HOW_IT_WORKS) {
     return <PublicHowItWorksPage onNavigate={navigate} />;
   }
-  if (routePath === ROUTES.PRICING) {
-    return <PublicPricingPage onNavigate={navigate} />;
-  }
   if (routePath === ROUTES.SECURITY) {
     return <PublicSecurityPage onNavigate={navigate} />;
   }
@@ -384,10 +378,6 @@ export const Router: React.FC = () => {
           return <ProjectsPage onNavigate={navigate} />;
         case ROUTES.TEAM:
           return <TeamPage onNavigate={navigate} />;
-        case ROUTES.INTEGRATIONS:
-          return <IntegrationsPage onNavigate={navigate} />;
-        case ROUTES.BILLING:
-          return <BillingPage onNavigate={navigate} />;
         case ROUTES.SETTINGS:
           return <SettingsPage onNavigate={navigate} />;
         case ROUTES.DESIGN_SYSTEM:

@@ -664,65 +664,30 @@ export const ScanDetailPage: React.FC<ScanDetailPageProps> = ({ scanId, onNaviga
                         Ingested Media Source
                       </CardTitle>
                       <CardDescription className="text-xs text-neutral-500">
-                        Target payload characteristics and channel attribution.
+                        Target payload characteristics and file metadata.
                       </CardDescription>
                     </div>
-                    <Badge variant={scan.sourceType === 'youtube_url' ? 'danger' : 'neutral'}>
-                      {scan.sourceType === 'youtube_url' ? 'YouTube URL' : 'File Upload'}
+                    <Badge variant="neutral">
+                      Media Upload
                     </Badge>
                   </div>
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  {scan.sourceType === 'youtube_url' ? (
-                    <div className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl border border-neutral-200 bg-neutral-50/50">
-                      <div className="relative w-full sm:w-48 aspect-video rounded-lg overflow-hidden bg-neutral-900 shrink-0 border border-neutral-200 shadow-2xs">
-                        <img
-                          src={
-                            scan.mediaInfo?.thumbnailUrl ||
-                            `https://img.youtube.com/vi/${scan.mediaInfo?.youtubeVideoId}/hqdefault.jpg`
-                          }
-                          alt={scan.title}
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/80 text-white font-mono text-[9px] font-bold">
-                          YouTube
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2">
-                          <Youtube className="w-4 h-4 text-red-600" />
-                          <span className="text-xs font-semibold text-neutral-900">
-                            {scan.mediaInfo?.channelTitle || 'YouTube Creator'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-neutral-700 line-clamp-2 font-medium">
-                          {scan.title}
-                        </p>
-                        <div className="pt-1 flex flex-wrap gap-2 text-[11px] font-mono text-neutral-500">
-                          <span className="bg-white px-2 py-0.5 rounded border border-neutral-200">
-                            Video ID: {scan.mediaInfo?.youtubeVideoId}
-                          </span>
-                        </div>
-                      </div>
+                  <div className="flex items-center gap-4 p-4 rounded-xl border border-neutral-200 bg-neutral-50/50">
+                    <div className="w-12 h-12 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-neutral-800 shadow-2xs shrink-0">
+                      <FileVideo className="w-6 h-6" />
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-4 p-4 rounded-xl border border-neutral-200 bg-neutral-50/50">
-                      <div className="w-12 h-12 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-neutral-800 shadow-2xs shrink-0">
-                        <FileVideo className="w-6 h-6" />
-                      </div>
-                      <div className="space-y-1 flex-1 overflow-hidden">
-                        <h4 className="text-xs font-bold text-neutral-900 truncate">
-                          {scan.mediaInfo?.fileName || scan.title}
-                        </h4>
-                        <p className="text-[11px] text-neutral-500">
-                          Format: {scan.mediaInfo?.format || 'Direct Media Upload'}
-                        </p>
-                      </div>
+                    <div className="space-y-1 flex-1 overflow-hidden">
+                      <h4 className="text-xs font-bold text-neutral-900 truncate">
+                        {scan.mediaInfo?.fileName || scan.title}
+                      </h4>
+                      <p className="text-[11px] text-neutral-500">
+                        Format: {scan.mediaInfo?.format || 'Direct Media Upload'}
+                        {scan.mediaInfo?.durationSeconds ? ` · ${(scan.mediaInfo.durationSeconds / 60).toFixed(1)} min` : ''}
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
 
