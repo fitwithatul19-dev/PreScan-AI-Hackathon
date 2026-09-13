@@ -3,15 +3,10 @@ import {
   UploadCloud,
   FileVideo,
   FileAudio,
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle,
   Play,
   Info,
   X,
-  Sparkles,
   Loader2,
-  Film,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
@@ -45,18 +40,13 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
   // Video Metadata State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [tags, setTags] = useState('');
-  const [category, setCategory] = useState('entertainment');
-  const [madeForKids, setMadeForKids] = useState('false');
   const [language, setLanguage] = useState('en');
-  const [durationMinutes, setDurationMinutes] = useState('');
 
   // Scan Checklist Options
   const [checkCommunityGuidelines, setCheckCommunityGuidelines] = useState(true);
   const [checkAdvertiserSuitability, setCheckAdvertiserSuitability] = useState(true);
   const [checkCopyrightSignals, setCheckCopyrightSignals] = useState(true);
   const [checkMetadataIntegrity, setCheckMetadataIntegrity] = useState(true);
-  const [sensitivity, setSensitivity] = useState<'STANDARD' | 'STRICT'>('STANDARD');
 
   // Submission Status
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -138,11 +128,11 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
       if (organization?.id) formData.append('organizationId', organization.id);
       if (title.trim()) formData.append('title', title.trim());
       if (description.trim()) formData.append('description', description.trim());
-      formData.append('category', category);
-      formData.append('tags', tags);
-      formData.append('madeForKids', madeForKids);
+      formData.append('category', 'entertainment');
+      formData.append('tags', '');
+      formData.append('madeForKids', 'false');
       formData.append('language', language);
-      formData.append('sensitivityLevel', sensitivity);
+      formData.append('sensitivityLevel', 'STANDARD');
       formData.append('checkCommunityGuidelines', checkCommunityGuidelines.toString());
       formData.append('checkAdvertiserSuitability', checkAdvertiserSuitability.toString());
       formData.append('checkCopyrightSignals', checkCopyrightSignals.toString());
@@ -163,7 +153,7 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto">
       <PageHeader
         title="Initiate PreScan"
         description="Upload video or audio media, configure planned metadata, and run AI pre-upload quality assurance."
@@ -319,7 +309,7 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
                     Step 2: Video Metadata Context
                   </CardTitle>
                   <CardDescription>
-                    Provide planned title, description, category, and tags for metadata integrity and policy checks.
+                    Provide planned title, description, and primary audio language for metadata integrity checks.
                   </CardDescription>
                 </div>
                 <span className="text-xs font-mono px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded border border-neutral-200">
@@ -348,78 +338,22 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
                 helperText="PreScan evaluates description links and sponsor disclosures for policy adherence"
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
                 <Select
-                  id="video-category-select"
-                  label="Video Category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  id="audio-language-select"
+                  label="Primary Audio Language"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
                   options={[
-                    { value: 'entertainment', label: 'Entertainment' },
-                    { value: 'gaming', label: 'Gaming' },
-                    { value: 'education', label: 'Education' },
-                    { value: 'howto', label: 'Howto & Style' },
-                    { value: 'news', label: 'News & Politics' },
-                    { value: 'people', label: 'People & Blogs' },
-                    { value: 'science', label: 'Science & Technology' },
-                    { value: 'film', label: 'Film & Animation' },
+                    { value: 'en', label: 'English (Global)' },
+                    { value: 'es', label: 'Spanish (Español)' },
+                    { value: 'fr', label: 'French (Français)' },
+                    { value: 'de', label: 'German (Deutsch)' },
+                    { value: 'ja', label: 'Japanese (日本語)' },
+                    { value: 'hi', label: 'Hindi (हिन्दी)' },
+                    { value: 'pt', label: 'Portuguese (Português)' },
                   ]}
                 />
-
-                <Select
-                  id="made-for-kids-select"
-                  label="Made for Kids Audience"
-                  value={madeForKids}
-                  onChange={(e) => setMadeForKids(e.target.value)}
-                  options={[
-                    { value: 'false', label: "No, it's not made for kids (Standard)" },
-                    { value: 'true', label: "Yes, it's made for kids (COPPA)" },
-                  ]}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <Input
-                    id="video-tags-input"
-                    label="Tags (Comma separated)"
-                    placeholder="productivity, workflow, guide"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
-                    helperText="Checked for keyword stuffing signals"
-                  />
-                </div>
-
-                <div>
-                  <Select
-                    id="audio-language-select"
-                    label="Primary Audio Language"
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    options={[
-                      { value: 'en', label: 'English (Global)' },
-                      { value: 'es', label: 'Spanish (Español)' },
-                      { value: 'fr', label: 'French (Français)' },
-                      { value: 'de', label: 'German (Deutsch)' },
-                      { value: 'ja', label: 'Japanese (日本語)' },
-                      { value: 'hi', label: 'Hindi (हिन्दी)' },
-                      { value: 'pt', label: 'Portuguese (Português)' },
-                    ]}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <div>
-                  <Input
-                    id="duration-estimate-input"
-                    label="Estimated Duration (Minutes, Optional)"
-                    placeholder="e.g., 14"
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(e.target.value)}
-                    helperText="Synchronized automatically during media stream analysis"
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -476,31 +410,11 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
                 <label className="block text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1.5">
                   Analysis Sensitivity
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    id="sensitivity-standard-btn"
-                    onClick={() => setSensitivity('STANDARD')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      sensitivity === 'STANDARD'
-                        ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
-                        : 'bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50'
-                    }`}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    type="button"
-                    id="sensitivity-strict-btn"
-                    onClick={() => setSensitivity('STRICT')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      sensitivity === 'STRICT'
-                        ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
-                        : 'bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50'
-                    }`}
-                  >
-                    Strict Review
-                  </button>
+                <div>
+                  <div className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-neutral-900 text-white border border-neutral-900 inline-flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span>Standard</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -522,13 +436,13 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
             <Button
               id="execute-scan-btn"
               variant="primary"
-              size="lg"
-              className="w-full"
+              size="md"
+              className="w-full bg-black text-white hover:bg-neutral-800 active:bg-neutral-950 font-semibold shadow-xs py-3 h-11 transition-colors"
               leftIcon={
                 isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
-                  <Play className="w-4 h-4 fill-current" />
+                  <Play className="w-4 h-4 fill-current text-white" />
                 )
               }
               disabled={!isCtaReady() || isSubmitting}
@@ -537,10 +451,8 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
               {isSubmitting
                 ? uploadProgress !== null
                   ? `Uploading (${uploadProgress}%)...`
-                  : 'Starting Ingestion Pipeline...'
-                : realFile
-                ? 'Upload & Ingest File'
-                : 'Select Media File'}
+                  : 'Starting Scan...'
+                : 'Scan'}
             </Button>
 
             <div className="flex items-center gap-2 text-[11px] text-neutral-400">
@@ -555,3 +467,4 @@ export const NewScanPage: React.FC<NewScanPageProps> = ({ onNavigate }) => {
     </div>
   );
 };
+
