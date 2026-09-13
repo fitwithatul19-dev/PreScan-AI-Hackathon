@@ -69,7 +69,7 @@ export const DesignSystemPage: React.FC<DesignSystemPageProps> = ({ onNavigate }
     <div className="space-y-10 pb-16">
       <PageHeader
         title="Design System & Component Library"
-        description="Interactive reference catalog of reusable UI components, tokens, and semantic states constructed in Phase 01."
+        description="Interactive reference catalog of reusable UI components, tokens, and semantic states."
         breadcrumbs={
           <Breadcrumb
             items={[
@@ -80,7 +80,7 @@ export const DesignSystemPage: React.FC<DesignSystemPageProps> = ({ onNavigate }
         }
         badge={
           <Badge variant="default">
-            Phase 01 Tokens
+            Component Tokens
           </Badge>
         }
       />
@@ -298,7 +298,7 @@ export const DesignSystemPage: React.FC<DesignSystemPageProps> = ({ onNavigate }
               }
             >
               <p className="text-xs text-neutral-600 leading-relaxed">
-                This dialog demonstrates modular modal encapsulation without external UI bloat. It can host confirmation prompts, video player overlays, or export dialogues in future phases.
+                This dialog demonstrates modular modal encapsulation without external UI bloat. It can host confirmation prompts, video player overlays, or export dialogues.
               </p>
             </Dialog>
           </div>

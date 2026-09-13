@@ -12,7 +12,7 @@ import { MultilingualProfanityEngine } from './profanity/multilingualProfanityEn
 
 export class AnalysisEngineService {
   /**
-   * Triggers or retries Phase 05.1 analysis for a given scan.
+   * Triggers or retries analysis for a given scan.
    */
   static async startScanAnalysis(
     scanId: string,
@@ -108,7 +108,7 @@ export class AnalysisEngineService {
   }
 
   /**
-   * Background worker for Phase 05.1 Real Gemini Media Analysis Pipeline
+   * Background worker for Real Gemini Media Analysis Pipeline
    */
   private static async runAnalysisPipeline(
     scanId: string,
@@ -125,7 +125,7 @@ export class AnalysisEngineService {
       const sourceType = scan.sourceType || scan.source?.type || (scan.mediaInfo?.youtubeVideoId ? 'youtube_url' : 'file');
 
       if (sourceType === ('youtube_connection' as any) || sourceType === ('connected_channel' as any)) {
-        throw new Error('Connected channel ingestion is reserved for Phase 06.');
+        throw new Error('Connected channel ingestion is not supported.');
       }
 
       // --- STAGE 1: MEDIA_PREPARING ---
@@ -1043,7 +1043,7 @@ Please analyze the provided media file for YouTube policy compliance according t
 
     // Ensure limitations & disclaimer
     report.limitations = report.limitations || [
-      'Visual content was not analyzed — PreScan Phase 05 evaluates spoken audio dialogue and video metadata only.',
+      'Visual content was not analyzed — PreScan evaluates spoken audio dialogue and video metadata only.',
     ];
     report.disclaimer =
       'PreScan is an advisory pre-upload QA tool. Final policy decisions rest entirely with YouTube\'s automated systems and review teams.';

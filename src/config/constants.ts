@@ -3,8 +3,7 @@ import { Plan, PlanTier } from '../types';
 export const APP_INFO = {
   name: 'PreScan',
   tagline: 'Know what to review before you publish.',
-  description: 'AI-powered pre-upload quality assurance for YouTube creators.',
-  phase: 'Production Marketing & App Shell (Phase 02)',
+  description: 'Pre-upload content risk analysis and quality assurance for video creators.',
   copyright: '© 2026 PreScan',
 };
 

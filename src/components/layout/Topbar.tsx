@@ -28,11 +28,11 @@ export const Topbar: React.FC<TopbarProps> = ({
         </IconButton>
 
         <div className="flex items-center gap-2 text-xs text-neutral-500">
-          <span className="hidden sm:inline font-medium text-neutral-700">PreScan Engine</span>
+          <span className="hidden sm:inline font-medium text-neutral-700">PreScan Workspace</span>
           <span className="hidden sm:inline text-neutral-300">•</span>
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
             <ShieldCheck className="w-3 h-3 text-emerald-600" />
-            <span>Phase 01 Active</span>
+            <span>Operational</span>
           </span>
         </div>
       </div>

@@ -249,7 +249,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </div>
 
               <div className="pt-3 border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-500">
-                <span className="font-mono text-[11px]">Phase Engine Spec</span>
+                <span className="font-mono text-[11px]">Compliance Engine</span>
                 <span className="text-neutral-400">Standard Rule-Set</span>
               </div>
             </Card>

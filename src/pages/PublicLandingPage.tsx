@@ -110,7 +110,7 @@ export const PublicLandingPage: React.FC<PublicLandingPageProps> = ({ onNavigate
           {/* Subtle trust badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-800 border border-neutral-200/80 shadow-2xs">
             <Sparkles className="w-3.5 h-3.5 text-neutral-700" />
-            <span>AI-Powered Pre-Upload Quality Assurance</span>
+            <span>Pre-Upload Content Quality Assurance</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-neutral-900 max-w-4xl mx-auto leading-[1.15]">

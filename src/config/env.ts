@@ -16,7 +16,7 @@ export const config: AppConfig = {
   appUrl: import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,
-  version: '0.1.0-phase01',
+  version: '1.0.0',
 };
 
 /**

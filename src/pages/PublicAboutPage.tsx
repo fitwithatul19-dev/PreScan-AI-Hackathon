@@ -12,7 +12,7 @@ export const PublicAboutPage: React.FC<PublicAboutPageProps> = ({ onNavigate }) 
   const values = [
     {
       title: 'Creator Sovereignty',
-      description: 'You stay in 100% control of what you publish. PreScan provides assistive findings with context, never automated censorship.',
+      description: 'You stay in complete control of what you publish. PreScan provides assistive findings with context, never automated censorship.',
       icon: <Target className="w-5 h-5 text-neutral-900" />,
     },
     {

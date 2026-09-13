@@ -359,7 +359,7 @@ export const OnboardingPage: React.FC<OnboardingPageProps> = ({ onNavigate }) =>
                   <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-4 space-y-2 text-xs text-neutral-600">
                     <div className="flex items-center gap-2 font-semibold text-neutral-900">
                       <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>Workspace Isolation & Provisioning Guarantee</span>
+                      <span>Workspace Isolation & Provisioning</span>
                     </div>
                     <p className="text-[11px] text-neutral-500 leading-relaxed">
                       Your workspace will be initialized with dedicated tenant partitioning. All subsequent scans, reports, and team collaborations will be scoped exclusively to this organization.

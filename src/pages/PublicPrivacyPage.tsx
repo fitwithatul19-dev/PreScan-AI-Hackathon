@@ -27,7 +27,7 @@ export const PublicPrivacyPage: React.FC<PublicPrivacyPageProps> = ({ onNavigate
             Privacy Policy
           </h1>
           <p className="text-xs text-neutral-500 font-mono">
-            Last Updated: August 2026 • Version 1.0 (Phase 02 Baseline)
+            Last Updated: August 2026
           </p>
         </div>
       </section>

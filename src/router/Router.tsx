@@ -23,7 +23,7 @@ import { PublicContactPage } from '../pages/PublicContactPage';
 import { PublicPrivacyPage } from '../pages/PublicPrivacyPage';
 import { PublicTermsPage } from '../pages/PublicTermsPage';
 
-// Phase 03 Real Auth & Onboarding Pages
+// Authentication & Onboarding Pages
 import { LoginPage } from '../pages/LoginPage';
 import { SignupPage } from '../pages/SignupPage';
 import { VerifyEmailPage } from '../pages/VerifyEmailPage';

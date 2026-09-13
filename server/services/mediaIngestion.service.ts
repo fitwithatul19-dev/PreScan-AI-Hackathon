@@ -672,7 +672,7 @@ export class MediaIngestionService {
         currentStep: 'Extracting public audio stream and thumbnail assets from YouTube source',
       });
 
-      // Phase 05.1: Pass public YouTube URL directly to Gemini instead of downloading via yt-dlp
+      // Pass public YouTube URL directly to Gemini instead of downloading via yt-dlp
       const currentScan = db.findScanById(scanId);
       if (currentScan) {
         const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;

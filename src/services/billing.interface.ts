@@ -8,7 +8,6 @@ export interface ScanEligibility {
 
 /**
  * BillingService Contract Boundary
- * Provides architectural interface for Phase 08/09 Stripe & subscription integration.
  */
 export interface IBillingService {
   getCurrentSubscription(organizationId: string): Promise<Subscription | null>;

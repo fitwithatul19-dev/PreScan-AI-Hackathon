@@ -45,12 +45,12 @@ export const PublicSecurityPage: React.FC<PublicSecurityPageProps> = ({ onNaviga
     },
     {
       title: 'Least-Privilege Integrations',
-      description: 'When connecting external platforms like YouTube Studio in future phases, PreScan requests strictly the minimal necessary scopes required to fetch draft metadata.',
+      description: 'When connecting external platforms, PreScan requests strictly the minimal necessary scopes required to process video metadata.',
       icon: <Key className="w-5 h-5 text-neutral-900" />,
     },
     {
       title: 'Data Retention & Creator Deletion Rights',
-      description: 'You maintain 100% control over your scans and project history. Deleting a report or project permanently purges associated metadata from our systems.',
+      description: 'You maintain full control over your scans and project history. Deleting a report or project permanently purges associated metadata from our systems.',
       icon: <Trash2 className="w-5 h-5 text-neutral-900" />,
     },
   ];

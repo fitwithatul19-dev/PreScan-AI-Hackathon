@@ -70,7 +70,7 @@ export const PublicHowItWorksPage: React.FC<PublicHowItWorksPageProps> = ({ onNa
     {
       num: '04',
       title: 'Publish with complete context',
-      subtitle: 'You stay in 100% editorial control of your channel',
+      subtitle: 'You stay in full editorial control of your channel',
       details:
         'PreScan does not alter your video files or automatically publish on your behalf. You review the findings, make any necessary edits in your video editor, and publish to YouTube with peace of mind.',
       points: [

@@ -49,10 +49,6 @@ export const PublicAuthPage: React.FC<PublicAuthPageProps> = ({ mode, onNavigate
           </p>
         </div>
 
-        <Alert variant="info" title="Auth Service Boundary Notice">
-          Authentication and OAuth session exchanges are non-functional placeholders in Phase 02. Submitting below initializes and enters your workspace shell immediately.
-        </Alert>
-
         <Card className="bg-white shadow-sm border-neutral-200">
           <CardContent className="pt-5">
             <form onSubmit={handleSubmit} className="space-y-4">

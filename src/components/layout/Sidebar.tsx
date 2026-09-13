@@ -91,7 +91,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Design System & UI',
       href: '/app/design-system',
       icon: <Palette className="w-4 h-4" />,
-      badge: 'Phase 01',
     },
   ];
 
@@ -171,12 +170,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="font-bold text-sm tracking-tight text-neutral-900">
                   Pre<span className="text-neutral-500">Scan</span>
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-neutral-100 text-neutral-600 rounded border border-neutral-200">
-                  v0.1
-                </span>
               </div>
               <p className="text-[10px] text-neutral-400 font-medium">
-                QA for YouTube Creators
+                QA & Policy Review
               </p>
             </div>
           </button>

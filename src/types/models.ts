@@ -128,7 +128,7 @@ export interface Project {
 }
 
 /**
- * Scan Source Identification Types (Phase 02 Modification)
+ * Scan Source Identification Types
  */
 export type ScanSourceType = 'file' | 'youtube_url' | 'youtube_connection';
 

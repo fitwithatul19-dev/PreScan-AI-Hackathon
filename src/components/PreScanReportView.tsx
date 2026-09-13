@@ -1546,7 +1546,7 @@ export const PreScanReportView: React.FC<PreScanReportViewProps> = ({
             </CardHeader>
             <CardContent className="space-y-3 text-xs text-amber-950">
               <ul className="space-y-2 list-disc pl-5 leading-relaxed font-sans">
-                <li>Visual computer vision frame analysis was not performed — PreScan Phase 05-10 evaluates spoken audio dialogue and metadata text attributes.</li>
+                <li>Visual computer vision frame analysis was not performed — PreScan evaluates spoken audio dialogue and metadata text attributes.</li>
                 <li>Background audio tracks were analyzed for transcript dialogue; acoustic music fingerprinting is subject to third-party Content ID databases.</li>
                 <li>PreScan provides automated policy advisory signals; YouTube enforcement mechanisms are dynamic and server-side.</li>
               </ul>
