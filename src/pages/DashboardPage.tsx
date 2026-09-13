@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShieldAlert,
-  DollarSign,
-  Copyright,
-  FileText,
   Plus,
   ArrowRight,
   CheckCircle2,
@@ -15,11 +11,10 @@ import {
   UploadCloud,
   History,
   AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { PageHeader } from '../components/ui/PageHeader';
-import { CAPABILITIES } from '../config/constants';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../router/routes';
 import { ScanService } from '../services/scan.service';
@@ -31,16 +26,9 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
-  const { user, organization } = useAuth();
+  const { organization } = useAuth();
   const [scans, setScans] = useState<Scan[]>([]);
   const [isLoadingScans, setIsLoadingScans] = useState(true);
-
-  const capabilityIcons: Record<string, React.ReactNode> = {
-    'community-guidelines': <ShieldAlert className="w-5 h-5 text-neutral-800" />,
-    'advertiser-suitability': <DollarSign className="w-5 h-5 text-neutral-800" />,
-    'copyright-signals': <Copyright className="w-5 h-5 text-neutral-800" />,
-    'metadata-integrity': <FileText className="w-5 h-5 text-neutral-800" />,
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -149,27 +137,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         }
       />
 
-      {/* 1. Medium-sized "Start your new scan" Primary Section */}
-      <div className="relative overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-900 text-white p-6 sm:p-8 shadow-md">
+      {/* 1. Medium-sized "Start your new scan" Primary Section with White Card & White Button */}
+      <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white text-neutral-900 p-6 sm:p-8 shadow-xs">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-medium">
-              <UploadCloud className="w-3.5 h-3.5 text-neutral-200" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-700 text-xs font-medium">
+              <UploadCloud className="w-3.5 h-3.5 text-neutral-700" />
               <span>Pre-Upload Content Verification</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-neutral-900">
               Start your new scan
             </h2>
-            <p className="text-sm text-neutral-300 leading-relaxed">
+            <p className="text-sm text-neutral-600 leading-relaxed">
               Upload your video (MP4, MOV, WebM) or audio (MP3, WAV, AAC) to run multi-dimensional policy, advertiser suitability, and copyright risk screening before publishing.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
             <Button
-              variant="primary"
+              variant="outline"
               size="lg"
-              className="bg-white text-neutral-950 hover:bg-neutral-100 font-bold shadow-sm"
+              className="bg-white text-neutral-950 hover:bg-neutral-50 font-bold border-2 border-neutral-300 hover:border-neutral-900 shadow-xs transition-colors"
               leftIcon={<Plus className="w-5 h-5 text-neutral-950" />}
               onClick={() => onNavigate(ROUTES.NEW_SCAN)}
             >
@@ -271,62 +259,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* 3. Analysis Capabilities Overview */}
-      <div className="space-y-3 pt-2">
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800">
-            Analysis Capabilities
-          </h3>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            Four core dimensions evaluated during each PreScan execution.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {CAPABILITIES.map((cap) => (
-            <Card key={cap.id} variant="default" className="flex flex-col justify-between">
-              <div>
-                <CardHeader className="mb-2.5">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="w-8 h-8 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center shrink-0">
-                      {capabilityIcons[cap.id]}
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-neutral-900">
-                        {cap.name}
-                      </CardTitle>
-                      <span className="text-[11px] text-neutral-500 font-medium">
-                        {cap.shortDescription}
-                      </span>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="mb-3">
-                  <p className="text-xs text-neutral-600 leading-relaxed mb-2.5">
-                    {cap.details}
-                  </p>
-                  <ul className="space-y-1.5">
-                    {cap.coverageList.map((item, i) => (
-                      <li key={i} className="flex items-center gap-2 text-xs text-neutral-700">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </div>
-
-              <div className="pt-2.5 border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-500">
-                <span className="font-mono text-[11px]">Compliance Engine</span>
-                <span className="text-neutral-400">Standard Rule-Set</span>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Multi-Tenant Isolation Architecture Note */}
+      {/* Tenant Isolation Architecture Note */}
       <div className="rounded-xl border border-neutral-200 bg-white p-4 sm:p-5 flex items-start gap-4 shadow-xs">
         <div className="w-8 h-8 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-700 shrink-0">
           <Lock className="w-4 h-4" />
@@ -343,4 +276,5 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     </div>
   );
 };
+
 
