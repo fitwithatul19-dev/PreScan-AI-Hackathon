@@ -1,0 +1,360 @@
+{
+  "users": [
+    {
+      "id": "usr_63e223a9fc6adc1ff8b5a87a",
+      "email": "himanshu9968014@gmail.com",
+      "fullName": "Youtuber Xrp",
+      "displayName": "Youtuber Xrp",
+      "emailVerified": true,
+      "passwordHash": "b79f046ce6eca32a6de6c0e7ffddc2f637c58e866041e3af152fe4483f374a4c2c10ffa04381084a47186ba3af33c3c2e88205c79c315ff2c935c2e613b7227f",
+      "passwordSalt": "4486d5c2ebaf460a306518a583533f84",
+      "status": "ACTIVE",
+      "termsAcceptedAt": "2026-08-31T07:38:01.380Z",
+      "privacyAcceptedAt": "2026-08-31T07:38:01.380Z",
+      "createdAt": "2026-08-31T07:38:01.380Z",
+      "updatedAt": "2026-08-31T07:40:11.118Z",
+      "lastLoginAt": "2026-08-31T07:39:05.790Z",
+      "defaultOrganizationId": "org_1789274678535_sqpcy"
+    },
+    {
+      "id": "usr_4c6584b94a7cba32f8ac5c5e",
+      "email": "alex.test@example.com",
+      "fullName": "Alex Test",
+      "displayName": "Alex Test",
+      "emailVerified": true,
+      "passwordHash": "7ca17bffac1c0f46045df32df2ff0716fd2c6e6d1a697c21507945c75960faca73d851addc894233f637fc93a7a9cae3d4d913230629a2d052efb64a0163ad29",
+      "passwordSalt": "7cae327c1492d5b2121fe9a5c1d0b6b4",
+      "status": "ACTIVE",
+      "termsAcceptedAt": "2026-08-31T07:51:17.408Z",
+      "privacyAcceptedAt": "2026-08-31T07:51:17.408Z",
+      "createdAt": "2026-08-31T07:51:17.408Z",
+      "updatedAt": "2026-08-31T07:51:39.986Z",
+      "lastLoginAt": "2026-08-31T07:51:39.986Z",
+      "defaultOrganizationId": "org_c34e387a5ab77a7bdf458e53"
+    },
+    {
+      "id": "usr_c655046b6a62bed425579fd8",
+      "email": "unverified@example.com",
+      "fullName": "Unverified User",
+      "displayName": "Unverified User",
+      "emailVerified": false,
+      "passwordHash": "1b3fc11124f8348c975887e13c44f1b5313f0b90fd4a17edd4dcb42650d3d91bc6a6ca4c3797e3b644ed574e8c541ea55965528f9904d996dc81843213bd7834",
+      "passwordSalt": "13fd9cca83096e47f34845b00bdffe78",
+      "status": "ACTIVE",
+      "termsAcceptedAt": "2026-08-31T07:51:43.361Z",
+      "privacyAcceptedAt": "2026-08-31T07:51:43.361Z",
+      "createdAt": "2026-08-31T07:51:43.361Z",
+      "updatedAt": "2026-08-31T07:51:43.361Z",
+      "lastLoginAt": "2026-08-31T07:51:43.361Z",
+      "defaultOrganizationId": "org_1789274678535_th7mg"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "93aa3e9f905829f79c6d3452ac6e28719068270ec9e08095385ec33ec8f212e7",
+      "userId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "expiresAt": "2026-09-30T07:38:01.439Z",
+      "createdAt": "2026-08-31T07:38:01.380Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "token": "3226901b0723fd2b79f45c123cc6e90921a4281212d2d0a0d26402e3da4e9120",
+      "userId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "expiresAt": "2026-09-30T07:39:05.790Z",
+      "createdAt": "2026-08-31T07:39:05.790Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "token": "56cbb569d97d2827ef0e420f935a2ea940e71d39cbd18b7ac3f0d06d71030c9e",
+      "userId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "expiresAt": "2026-09-30T07:51:17.482Z",
+      "createdAt": "2026-08-31T07:51:17.408Z",
+      "userAgent": "curl/7.88.1",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "token": "e787456e665727fd2514d1d1c8f56dcbe6deb9ac00b17924a7d992770c010bc1",
+      "userId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "expiresAt": "2026-09-30T07:51:27.987Z",
+      "createdAt": "2026-08-31T07:51:27.987Z",
+      "userAgent": "curl/7.88.1",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "token": "b823f55325273e15347eee968960df6b774f383d9eeffc52377f096b19262f49",
+      "userId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "expiresAt": "2026-09-30T07:51:39.986Z",
+      "createdAt": "2026-08-31T07:51:39.986Z",
+      "userAgent": "curl/7.88.1",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "token": "385dd6744b72e686c146fe2fbdd3ee7e36bdc224ebf96a3dcd1aef4b8df71ee1",
+      "userId": "usr_c655046b6a62bed425579fd8",
+      "expiresAt": "2026-09-30T07:51:43.408Z",
+      "createdAt": "2026-08-31T07:51:43.361Z",
+      "userAgent": "curl/7.88.1",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "token": "4f3a8e54b55a76e2d6aa6ba8f7f128226233804e86af3224eae5c8ed7d65b2c7",
+      "userId": "usr_c655046b6a62bed425579fd8",
+      "expiresAt": "2026-09-30T07:51:43.464Z",
+      "createdAt": "2026-08-31T07:51:43.464Z",
+      "userAgent": "curl/7.88.1",
+      "ipAddress": "127.0.0.1"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "org_c34e387a5ab77a7bdf458e53",
+      "name": "Alex Studio",
+      "slug": "alex-studio-1267",
+      "createdById": "usr_4c6584b94a7cba32f8ac5c5e",
+      "createdAt": "2026-08-31T07:51:31.480Z",
+      "updatedAt": "2026-08-31T07:51:31.480Z",
+      "ownerId": "usr_4c6584b94a7cba32f8ac5c5e"
+    },
+    {
+      "id": "org_1789274678535_sqpcy",
+      "name": "Youtuber Xrp's Workspace",
+      "slug": "youtuber-xrp-s-workspace-7019",
+      "ownerId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "createdById": "usr_63e223a9fc6adc1ff8b5a87a",
+      "status": "ACTIVE",
+      "createdAt": "2026-09-13T04:44:38.534Z",
+      "updatedAt": "2026-09-13T04:44:38.534Z"
+    },
+    {
+      "id": "org_1789274678535_th7mg",
+      "name": "Unverified User's Workspace",
+      "slug": "unverified-user-s-workspace-2195",
+      "ownerId": "usr_c655046b6a62bed425579fd8",
+      "createdById": "usr_c655046b6a62bed425579fd8",
+      "status": "ACTIVE",
+      "createdAt": "2026-09-13T04:44:38.535Z",
+      "updatedAt": "2026-09-13T04:44:38.535Z"
+    }
+  ],
+  "memberships": [
+    {
+      "id": "mem_510005c1fe21736e36a44d03",
+      "organizationId": "org_c34e387a5ab77a7bdf458e53",
+      "userId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "role": "OWNER",
+      "joinedAt": "2026-08-31T07:51:31.480Z",
+      "updatedAt": "2026-08-31T07:51:31.480Z"
+    },
+    {
+      "id": "mem_1789274678535_5ou3h",
+      "organizationId": "org_1789274678535_sqpcy",
+      "userId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "role": "OWNER",
+      "status": "ACTIVE",
+      "joinedAt": "2026-09-13T04:44:38.534Z",
+      "createdAt": "2026-09-13T04:44:38.534Z",
+      "updatedAt": "2026-09-13T04:44:38.534Z"
+    },
+    {
+      "id": "mem_1789274678535_3wbxi",
+      "organizationId": "org_1789274678535_th7mg",
+      "userId": "usr_c655046b6a62bed425579fd8",
+      "role": "OWNER",
+      "status": "ACTIVE",
+      "joinedAt": "2026-09-13T04:44:38.535Z",
+      "createdAt": "2026-09-13T04:44:38.535Z",
+      "updatedAt": "2026-09-13T04:44:38.535Z"
+    }
+  ],
+  "invitations": [],
+  "onboarding": [
+    {
+      "userId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "step": 1,
+      "status": "IN_PROGRESS",
+      "updatedAt": "2026-08-31T07:38:01.438Z"
+    },
+    {
+      "userId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "step": 4,
+      "status": "COMPLETED",
+      "updatedAt": "2026-08-31T07:51:31.481Z",
+      "creatorType": "solo_creator",
+      "contentTypes": [
+        "gaming",
+        "tech"
+      ],
+      "publishFrequency": "weekly",
+      "workspaceName": "Alex Studio",
+      "completedAt": "2026-08-31T07:51:31.480Z"
+    },
+    {
+      "userId": "usr_c655046b6a62bed425579fd8",
+      "step": 1,
+      "status": "IN_PROGRESS",
+      "updatedAt": "2026-08-31T07:51:43.407Z"
+    }
+  ],
+  "verificationTokens": [
+    {
+      "token": "7c6ef878b25e85b4b6c979150cf20ccd98deb9f0d580c3391903ce441a979fc1",
+      "userId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "email": "himanshu9968014@gmail.com",
+      "expiresAt": "2026-09-01T07:38:01.438Z",
+      "createdAt": "2026-08-31T07:38:01.380Z",
+      "usedAt": "2026-08-31T07:40:11.118Z"
+    },
+    {
+      "token": "bc3b6c6a0e260b5183be4227808d3e5aadfa42d95aebd6b3a120c2c8991aad9d",
+      "userId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "email": "alex.test@example.com",
+      "expiresAt": "2026-09-01T07:51:17.467Z",
+      "createdAt": "2026-08-31T07:51:17.408Z"
+    },
+    {
+      "token": "f92ccf1fc767e9cf9b8968736a8a6bbd1fe9be28e1249c58c06c16bab5c93e8c",
+      "userId": "usr_c655046b6a62bed425579fd8",
+      "email": "unverified@example.com",
+      "expiresAt": "2026-09-01T07:51:43.406Z",
+      "createdAt": "2026-08-31T07:51:43.361Z"
+    }
+  ],
+  "otpChallenges": [
+    {
+      "id": "otp_34626652d5dec5d72969134e",
+      "userId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "email": "alex.test@example.com",
+      "otpHash": "79eb9e3f02b6da6f9141dadf342c45ee6e18d04b7ccd2417555b75d12f29ddb3",
+      "salt": "0dac195e8a4406c204150f4fa06943e6",
+      "expiresAt": "2026-08-31T08:01:17.467Z",
+      "attemptCount": 0,
+      "maxAttempts": 5,
+      "createdAt": "2026-08-31T07:51:17.467Z",
+      "lastResentAt": "2026-08-31T07:51:17.467Z",
+      "usedAt": "2026-08-31T07:51:27.986Z"
+    },
+    {
+      "id": "otp_b4c00b70c1634cd4a6b14ba9",
+      "userId": "usr_c655046b6a62bed425579fd8",
+      "email": "unverified@example.com",
+      "otpHash": "295967c8684340860a7364912681cd67068c4ac3c909905ad40fd35c2188428d",
+      "salt": "d87046330ece32bb71b7c7786272c65b",
+      "expiresAt": "2026-08-31T08:01:43.406Z",
+      "attemptCount": 0,
+      "maxAttempts": 5,
+      "createdAt": "2026-08-31T07:51:43.406Z",
+      "lastResentAt": "2026-08-31T07:51:43.406Z"
+    }
+  ],
+  "passwordResetTokens": [],
+  "auditLogs": [
+    {
+      "id": "aud_31791e0a844b5a6524c5fa34",
+      "actorUserId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "action": "USER_REGISTERED",
+      "metadataJson": "{\"email\":\"himanshu9968014@gmail.com\"}",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:38:01.380Z"
+    },
+    {
+      "id": "aud_bfa353c56c10c01208839aeb",
+      "actorUserId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "action": "USER_LOGGED_IN",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:39:05.790Z"
+    },
+    {
+      "id": "aud_d4c406512c657ee0b275d2aa",
+      "actorUserId": "usr_63e223a9fc6adc1ff8b5a87a",
+      "action": "EMAIL_VERIFIED",
+      "metadataJson": "{\"email\":\"himanshu9968014@gmail.com\"}",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:40:11.118Z"
+    },
+    {
+      "id": "aud_58e62ef02fab56851ebdb252",
+      "actorUserId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "action": "USER_REGISTERED",
+      "metadataJson": "{\"email\":\"alex.test@example.com\"}",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:51:17.408Z"
+    },
+    {
+      "id": "aud_1da559313392f73778299bdd",
+      "actorUserId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "action": "EMAIL_VERIFIED",
+      "metadataJson": "{\"email\":\"alex.test@example.com\",\"method\":\"OTP\"}",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:51:27.987Z"
+    },
+    {
+      "id": "aud_c6bdf5ae95474c337f3df395",
+      "organizationId": "org_c34e387a5ab77a7bdf458e53",
+      "actorUserId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "action": "WORKSPACE_CREATED",
+      "metadataJson": "{\"name\":\"Alex Studio\"}",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:51:31.480Z"
+    },
+    {
+      "id": "aud_d32e07c360da5dff48930fb1",
+      "organizationId": "org_c34e387a5ab77a7bdf458e53",
+      "actorUserId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "action": "ONBOARDING_COMPLETED",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:51:31.480Z"
+    },
+    {
+      "id": "aud_194d73723621b8c2136728d2",
+      "actorUserId": "usr_4c6584b94a7cba32f8ac5c5e",
+      "action": "USER_LOGGED_IN",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:51:39.986Z"
+    },
+    {
+      "id": "aud_fff457e225c05258f5988c80",
+      "actorUserId": "usr_c655046b6a62bed425579fd8",
+      "action": "USER_REGISTERED",
+      "metadataJson": "{\"email\":\"unverified@example.com\"}",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-08-31T07:51:43.361Z"
+    }
+  ],
+  "mailLog": [
+    {
+      "id": "msg_82620febece2cf0d940b0639",
+      "to": "unverified@example.com",
+      "subject": "205796 is your PreScan verification code",
+      "type": "VERIFY_EMAIL",
+      "token": "205796",
+      "actionUrl": "/verify-email?email=unverified%40example.com&code=205796",
+      "sentAt": "2026-08-31T07:51:43.407Z"
+    },
+    {
+      "id": "msg_0eb41fc3b033306fa72f2869",
+      "to": "alex.test@example.com",
+      "subject": "195116 is your PreScan verification code",
+      "type": "VERIFY_EMAIL",
+      "token": "195116",
+      "actionUrl": "/verify-email?email=alex.test%40example.com&code=195116",
+      "sentAt": "2026-08-31T07:51:17.467Z"
+    },
+    {
+      "id": "mail_97cfc882f3a5215e010bc385",
+      "to": "himanshu9968014@gmail.com",
+      "subject": "Verify your PreScan Creator account",
+      "type": "VERIFY_EMAIL",
+      "token": "7c6ef878b25e85b4b6c979150cf20ccd98deb9f0d580c3391903ce441a979fc1",
+      "actionUrl": "http://localhost:3000/verify-email?token=7c6ef878b25e85b4b6c979150cf20ccd98deb9f0d580c3391903ce441a979fc1",
+      "sentAt": "2026-08-31T07:38:01.380Z"
+    }
+  ],
+  "scans": [],
+  "ingestionJobs": [],
+  "videos": [],
+  "analysisJobs": [],
+  "transcripts": [],
+  "preScanReports": []
+}
