@@ -7,8 +7,6 @@ import { DashboardPage } from '../pages/DashboardPage';
 import { NewScanPage } from '../pages/NewScanPage';
 import { ScansPage } from '../pages/ScansPage';
 import { ScanDetailPage } from '../pages/ScanDetailPage';
-import { ReportsPage } from '../pages/ReportsPage';
-import { ProjectsPage } from '../pages/ProjectsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 
 // Public Marketing Pages
@@ -357,10 +355,6 @@ export const Router: React.FC = () => {
           return <NewScanPage onNavigate={navigate} />;
         case ROUTES.SCANS:
           return <ScansPage onNavigate={navigate} />;
-        case ROUTES.REPORTS:
-          return <ReportsPage onNavigate={navigate} />;
-        case ROUTES.PROJECTS:
-          return <ProjectsPage onNavigate={navigate} />;
         case ROUTES.SETTINGS:
           return <SettingsPage onNavigate={navigate} />;
         default:

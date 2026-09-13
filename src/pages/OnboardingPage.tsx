@@ -351,7 +351,7 @@ export const OnboardingPage: React.FC<OnboardingPageProps> = ({ onNavigate }) =>
                       setWorkspaceName(e.target.value);
                       if (error) setError(null);
                     }}
-                    helperText="Your workspace will be set up for your creator projects, scans, and reports."
+                    helperText="Your workspace will be set up for your creator scans and reports."
                     required
                     autoFocus
                   />
@@ -362,7 +362,7 @@ export const OnboardingPage: React.FC<OnboardingPageProps> = ({ onNavigate }) =>
                       <span>Workspace Isolation & Provisioning</span>
                     </div>
                     <p className="text-[11px] text-neutral-500 leading-relaxed">
-                      Your workspace will be initialized with dedicated tenant partitioning. All subsequent scans, project files, and reports will be scoped exclusively to this organization.
+                      Your workspace will be initialized with dedicated tenant partitioning. All subsequent scans, media files, and reports will be scoped exclusively to this organization.
                     </p>
                   </div>
                 </div>

@@ -19,8 +19,6 @@ export const ROUTES = {
   NEW_SCAN: '/app/new-scan',
   SCANS: '/app/scans',
   SCAN_DETAIL: (id: string) => `/app/scans/${id}`,
-  REPORTS: '/app/reports',
-  PROJECTS: '/app/projects',
   SETTINGS: '/app/settings',
 } as const;
 

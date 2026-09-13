@@ -3,8 +3,6 @@ import {
   LayoutDashboard,
   PlusCircle,
   History,
-  FileCheck2,
-  FolderKanban,
   Settings,
   Sparkles,
   X,
@@ -53,18 +51,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Scan History',
       href: '/app/scans',
       icon: <History className="w-4 h-4" />,
-    },
-    {
-      id: 'reports',
-      label: 'Reports',
-      href: '/app/reports',
-      icon: <FileCheck2 className="w-4 h-4" />,
-    },
-    {
-      id: 'projects',
-      label: 'Projects',
-      href: '/app/projects',
-      icon: <FolderKanban className="w-4 h-4" />,
     },
   ];
 

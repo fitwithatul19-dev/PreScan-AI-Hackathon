@@ -165,12 +165,12 @@ export const WorkspaceSwitcher: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => !isCreating && setIsCreateModalOpen(false)}
         title="Create Workspace"
-        description="Workspaces provide dedicated, isolated environments for your scans, projects, and reports."
+        description="Workspaces provide dedicated, isolated environments for your scans, media files, and reports."
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
           <Input
             label="Workspace Name"
-            placeholder="e.g. Media Production Team, Studio Alpha"
+            placeholder="e.g. Main Channel, Studio QA"
             value={newWorkspaceName}
             onChange={(e) => setNewWorkspaceName(e.target.value)}
             error={createError || undefined}
