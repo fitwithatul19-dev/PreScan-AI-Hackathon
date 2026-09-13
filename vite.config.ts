@@ -5,7 +5,12 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    envPrefix: ['VITE_', 'APP_'],
     plugins: [react(), tailwindcss()],
+    define: {
+      'process.env.APP_URL': JSON.stringify(process.env.APP_URL || process.env.VITE_APP_URL || ''),
+      'process.env.VITE_APP_URL': JSON.stringify(process.env.VITE_APP_URL || process.env.APP_URL || ''),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

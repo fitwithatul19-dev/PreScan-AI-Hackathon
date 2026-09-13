@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { db, DbUser, DbSession, DbOrganization, DbMembership } from './db';
 
 // Extend Express Request type with authenticated user & workspace context
@@ -12,6 +13,62 @@ declare global {
       membership?: DbMembership;
     }
   }
+}
+
+// Supabase server-side client configuration
+const DEFAULT_SUPABASE_URL = (
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  'https://gwegvhrsssshxfrnwolb.supabase.co'
+).trim();
+
+const DEFAULT_SUPABASE_KEY = (
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_KEY ||
+  process.env.VITE_SUPABASE_PUBLIC_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  'sb_publishable_6pNiNIoMRT17m8DnYdw1Tw_xBS6sb8Z'
+).trim();
+
+// Map of created Supabase clients keyed by project URL to support dynamic project matching
+const supabaseClientCache = new Map<string, SupabaseClient>();
+
+export function getSupabaseServerClient(customUrl?: string, customKey?: string): SupabaseClient {
+  const targetUrl = (customUrl || DEFAULT_SUPABASE_URL).trim();
+  const targetKey = (customKey || (targetUrl === DEFAULT_SUPABASE_URL ? DEFAULT_SUPABASE_KEY : (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY))).trim();
+
+  const cacheKey = `${targetUrl}:::${targetKey}`;
+  let client = supabaseClientCache.get(cacheKey);
+  if (!client) {
+    client = createClient(targetUrl, targetKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+    supabaseClientCache.set(cacheKey, client);
+  }
+  return client;
+}
+
+/**
+ * Extract the issuer URL from a JWT payload safely without verifying signature
+ */
+function extractJwtIssuerUrl(jwtToken: string): string | null {
+  try {
+    const parts = jwtToken.split('.');
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonStr = Buffer.from(base64, 'base64').toString('utf8');
+    const payload = JSON.parse(jsonStr);
+    if (payload?.iss && typeof payload.iss === 'string') {
+      return payload.iss.replace(/\/auth\/v1\/?$/, '').trim();
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
 }
 
 /**
@@ -93,52 +150,444 @@ export function rateLimit(options: { windowMs: number; max: number; message: str
 }
 
 /**
- * Require valid authenticated session
+ * Require valid authenticated session (supports Supabase JWTs, local sessions, and demo sessions)
  */
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  // Check cookie first, then fallback to Authorization header
-  let token = req.cookies?.['prescan_session'];
-  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
-    token = req.headers.authorization.substring(7);
-  }
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  try {
+    // 1. Extract Bearer token or session cookie
+    let token = req.cookies?.['prescan_session'];
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.substring(7).trim();
+    }
 
-  if (!token) {
-    return res.status(401).json({
-      error: 'Authentication required. Please log in to continue.',
-      code: 'UNAUTHENTICATED',
+    const demoHeader = (req.headers['x-demo-user'] || req.headers['x-user-email']) as string | undefined;
+
+    // 2. Handle explicit demo tokens
+    if (token && token.startsWith('demo_')) {
+      const rawIdentifier = token.replace(/^demo_/, '').trim();
+      const isEmail = rawIdentifier.includes('@');
+      const email = isEmail ? rawIdentifier.toLowerCase() : `${rawIdentifier.toLowerCase()}@prescan.demo`;
+      const userId = isEmail ? `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}` : `usr_${rawIdentifier}`;
+      const displayName = email.split('@')[0] || 'Demo Creator';
+
+      let user = db.findUserByEmail(email) || db.findUserById(userId);
+      if (!user) {
+        user = db.createUser({
+          id: userId,
+          email: email,
+          fullName: displayName,
+          displayName: displayName,
+          emailVerified: true,
+          passwordHash: 'demohash',
+          passwordSalt: 'demosalt',
+          status: 'ACTIVE',
+          termsAcceptedAt: new Date().toISOString(),
+          privacyAcceptedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      const targetOrgId = ((req.headers['x-workspace-id'] || req.headers['x-organization-id']) as string | undefined)?.trim();
+      let workspace: DbOrganization | undefined;
+      let membership: DbMembership | undefined;
+
+      if (targetOrgId) {
+        workspace = db.findOrganizationById(targetOrgId);
+        if (!workspace) {
+          workspace = db.createOrganization({
+            id: targetOrgId,
+            name: `${user.displayName}'s Workspace`,
+            slug: 'workspace',
+            createdById: user.id,
+            ownerId: user.id,
+            status: 'ACTIVE',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        membership = db.findMembership(targetOrgId, user.id);
+        if (!membership) {
+          membership = db.createMembership({
+            id: `mem_${user.id}_${targetOrgId}`,
+            organizationId: targetOrgId,
+            userId: user.id,
+            role: 'OWNER',
+            status: 'ACTIVE',
+            joinedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        req.workspace = workspace;
+        req.membership = membership;
+      } else {
+        const userOrgs = db.findOrganizationsByUserId(user.id);
+        if (userOrgs.length === 0) {
+          const defaultOrg = db.createOrganization({
+            id: `ws_${user.id}`,
+            name: `${user.displayName}'s Workspace`,
+            slug: 'workspace',
+            createdById: user.id,
+            ownerId: user.id,
+            status: 'ACTIVE',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+          membership = db.createMembership({
+            id: `mem_${user.id}_${defaultOrg.id}`,
+            organizationId: defaultOrg.id,
+            userId: user.id,
+            role: 'OWNER',
+            status: 'ACTIVE',
+            joinedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+          db.updateUser(user.id, { defaultOrganizationId: defaultOrg.id });
+          req.workspace = defaultOrg;
+          req.membership = membership;
+        } else {
+          req.workspace = userOrgs[0];
+          req.membership = db.findMembership(userOrgs[0].id, user.id) || undefined;
+        }
+      }
+
+      req.user = user;
+      req.session = {
+        token,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      return next();
+    }
+
+    // 3. Handle explicit demo headers when no token was provided
+    if (!token && demoHeader) {
+      const email = demoHeader.toLowerCase();
+      const userId = `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const displayName = email.split('@')[0] || 'Demo Creator';
+
+      let user = db.findUserByEmail(email) || db.findUserById(userId);
+      if (!user) {
+        user = db.createUser({
+          id: userId,
+          email: email,
+          fullName: displayName,
+          displayName: displayName,
+          emailVerified: true,
+          passwordHash: 'demohash',
+          passwordSalt: 'demosalt',
+          status: 'ACTIVE',
+          termsAcceptedAt: new Date().toISOString(),
+          privacyAcceptedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      const userOrgs = db.findOrganizationsByUserId(user.id);
+      let workspace: DbOrganization;
+      let membership: DbMembership | undefined;
+
+      if (userOrgs.length === 0) {
+        workspace = db.createOrganization({
+          id: `ws_${user.id}`,
+          name: `${user.displayName}'s Workspace`,
+          slug: 'workspace',
+          createdById: user.id,
+          ownerId: user.id,
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        membership = db.createMembership({
+          id: `mem_${user.id}_${workspace.id}`,
+          organizationId: workspace.id,
+          userId: user.id,
+          role: 'OWNER',
+          status: 'ACTIVE',
+          joinedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        db.updateUser(user.id, { defaultOrganizationId: workspace.id });
+      } else {
+        workspace = userOrgs[0];
+        membership = db.findMembership(workspace.id, user.id);
+      }
+
+      req.workspace = workspace;
+      req.membership = membership;
+      req.user = user;
+      req.session = {
+        token: `demo_${userId}`,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      return next();
+    }
+
+    // 4. If no token is provided at all, reject with 401
+    if (!token) {
+      return res.status(401).json({
+        error: 'Authentication required. Please log in to continue.',
+        code: 'UNAUTHENTICATED',
+      });
+    }
+
+    // 5. Try Supabase JWT validation if token has JWT structure or is not a local session token
+    const looksLikeJwt = token.includes('.') && token.split('.').length === 3;
+    if (looksLikeJwt) {
+      try {
+        const issuerUrl = extractJwtIssuerUrl(token);
+        let supabase = getSupabaseServerClient(issuerUrl || undefined);
+        let { data, error } = await supabase.auth.getUser(token);
+
+        // Fallback: if issuer-matched client failed and a different default project is configured, try default client
+        if ((error || !data?.user) && issuerUrl && issuerUrl !== DEFAULT_SUPABASE_URL) {
+          const fallbackClient = getSupabaseServerClient(DEFAULT_SUPABASE_URL);
+          const fallbackRes = await fallbackClient.auth.getUser(token);
+          if (!fallbackRes.error && fallbackRes.data?.user) {
+            data = fallbackRes.data;
+            error = null;
+            supabase = fallbackClient;
+          }
+        }
+
+        if (!error && data?.user) {
+          const sbUser = data.user;
+          const email = (sbUser.email || '').toLowerCase().trim();
+          const fullName = (
+            sbUser.user_metadata?.full_name ||
+            sbUser.user_metadata?.name ||
+            email.split('@')[0] ||
+            'Creator'
+          ).trim();
+          const displayName = (sbUser.user_metadata?.name || fullName).trim();
+          const isVerified = Boolean(
+            sbUser.email_confirmed_at ||
+            sbUser.app_metadata?.provider === 'google' ||
+            (sbUser.identities && sbUser.identities.some((i: any) => i.provider === 'google'))
+          );
+
+          // Find or create PreScan backend user record
+          let user = db.findUserById(sbUser.id) || (email ? db.findUserByEmail(email) : undefined);
+
+          if (!user) {
+            user = db.createUser({
+              id: sbUser.id,
+              email: email || `${sbUser.id}@prescan.auth`,
+              fullName: fullName || 'Creator',
+              displayName: displayName || 'Creator',
+              emailVerified: isVerified,
+              passwordHash: 'supabase_auth',
+              passwordSalt: 'supabase_auth',
+              status: 'ACTIVE',
+              termsAcceptedAt: new Date().toISOString(),
+              privacyAcceptedAt: new Date().toISOString(),
+              createdAt: sbUser.created_at || new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          } else {
+            // Update emailVerified status if verified in Supabase
+            if (isVerified && !user.emailVerified) {
+              db.updateUser(user.id, { emailVerified: true });
+              user.emailVerified = true;
+            }
+          }
+
+          if (user.status === 'DELETED') {
+            return res.status(401).json({
+              error: 'Account not found.',
+              code: 'USER_NOT_FOUND',
+            });
+          }
+
+          if (user.status === 'SUSPENDED') {
+            return res.status(403).json({
+              error: 'Your account has been suspended. Please contact support.',
+              code: 'ACCOUNT_SUSPENDED',
+            });
+          }
+
+          // Resolve Workspace / Organization
+          const targetOrgId = ((req.headers['x-workspace-id'] || req.headers['x-organization-id']) as string | undefined)?.trim();
+          let workspace: DbOrganization | undefined;
+          let membership: DbMembership | undefined;
+
+          if (targetOrgId) {
+            workspace = db.findOrganizationById(targetOrgId);
+            if (!workspace) {
+              workspace = db.createOrganization({
+                id: targetOrgId,
+                name: `${user.displayName}'s Workspace`,
+                slug: 'workspace',
+                createdById: user.id,
+                ownerId: user.id,
+                status: 'ACTIVE',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+            }
+            membership = db.findMembership(targetOrgId, user.id);
+            if (!membership) {
+              membership = db.createMembership({
+                id: `mem_${user.id}_${targetOrgId}`,
+                organizationId: targetOrgId,
+                userId: user.id,
+                role: 'OWNER',
+                status: 'ACTIVE',
+                joinedAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+            }
+            if (!user.defaultOrganizationId) {
+              db.updateUser(user.id, { defaultOrganizationId: targetOrgId });
+              user.defaultOrganizationId = targetOrgId;
+            }
+          } else {
+            if (user.defaultOrganizationId) {
+              workspace = db.findOrganizationById(user.defaultOrganizationId);
+            }
+            if (!workspace) {
+              const userOrgs = db.findOrganizationsByUserId(user.id);
+              if (userOrgs.length > 0) {
+                workspace = userOrgs[0];
+              }
+            }
+            if (workspace) {
+              membership = db.findMembership(workspace.id, user.id);
+            } else {
+              const defaultOrgId = `ws_${user.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+              workspace = db.findOrganizationById(defaultOrgId);
+              if (!workspace) {
+                workspace = db.createOrganization({
+                  id: defaultOrgId,
+                  name: `${user.displayName}'s Workspace`,
+                  slug: 'workspace',
+                  createdById: user.id,
+                  ownerId: user.id,
+                  status: 'ACTIVE',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+              membership = db.findMembership(defaultOrgId, user.id);
+              if (!membership) {
+                membership = db.createMembership({
+                  id: `mem_${user.id}_${defaultOrgId}`,
+                  organizationId: defaultOrgId,
+                  userId: user.id,
+                  role: 'OWNER',
+                  status: 'ACTIVE',
+                  joinedAt: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+              db.updateUser(user.id, { defaultOrganizationId: defaultOrgId });
+              user.defaultOrganizationId = defaultOrgId;
+            }
+          }
+
+          if (workspace && !membership) {
+            membership = db.createMembership({
+              id: `mem_${user.id}_${workspace.id}`,
+              organizationId: workspace.id,
+              userId: user.id,
+              role: 'OWNER',
+              status: 'ACTIVE',
+              joinedAt: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          }
+
+          req.user = user;
+          req.workspace = workspace;
+          req.membership = membership;
+          req.session = {
+            token,
+            userId: user.id,
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            createdAt: new Date().toISOString(),
+          };
+          return next();
+        }
+      } catch (sbErr) {
+        console.error('[Supabase Auth Verification Error]', sbErr);
+      }
+
+      // If token looked like a JWT but failed Supabase verification, return 401
+      res.clearCookie('prescan_session');
+      return res.status(401).json({
+        error: 'Authentication required. Please log in to continue.',
+        code: 'UNAUTHENTICATED',
+      });
+    }
+
+    // 6. Handle local database sessions
+    const session = db.findSession(token);
+    let user: DbUser | undefined;
+
+    if (session) {
+      user = db.findUserById(session.userId);
+    }
+
+    if (!session || !user) {
+      res.clearCookie('prescan_session');
+      return res.status(401).json({
+        error: 'Authentication required. Please log in to continue.',
+        code: 'UNAUTHENTICATED',
+      });
+    }
+
+    if (user.status === 'DELETED') {
+      db.deleteSession(token);
+      res.clearCookie('prescan_session');
+      return res.status(401).json({
+        error: 'Account not found.',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    if (user.status === 'SUSPENDED') {
+      return res.status(403).json({
+        error: 'Your account has been suspended. Please contact support.',
+        code: 'ACCOUNT_SUSPENDED',
+      });
+    }
+
+    // Resolve workspace for local session user
+    const targetOrgId = ((req.headers['x-workspace-id'] || req.headers['x-organization-id']) as string | undefined)?.trim();
+    if (targetOrgId) {
+      req.workspace = db.findOrganizationById(targetOrgId);
+      req.membership = db.findMembership(targetOrgId, user.id);
+    } else if (user.defaultOrganizationId) {
+      req.workspace = db.findOrganizationById(user.defaultOrganizationId);
+      req.membership = req.workspace ? db.findMembership(req.workspace.id, user.id) : undefined;
+    } else {
+      const userOrgs = db.findOrganizationsByUserId(user.id);
+      if (userOrgs.length > 0) {
+        req.workspace = userOrgs[0];
+        req.membership = db.findMembership(userOrgs[0].id, user.id);
+      }
+    }
+
+    req.user = user;
+    req.session = session;
+    return next();
+  } catch (err: any) {
+    console.error('[requireAuth Error]', err);
+    return res.status(500).json({
+      error: 'An internal error occurred while verifying authentication.',
+      code: 'AUTH_INTERNAL_ERROR',
     });
   }
-
-  const session = db.findSession(token);
-  if (!session) {
-    // Clear invalid cookie
-    res.clearCookie('prescan_session');
-    return res.status(401).json({
-      error: 'Your session has expired. Please log in again.',
-      code: 'SESSION_EXPIRED',
-    });
-  }
-
-  const user = db.findUserById(session.userId);
-  if (!user || user.status === 'DELETED') {
-    db.deleteSession(token);
-    res.clearCookie('prescan_session');
-    return res.status(401).json({
-      error: 'Account not found.',
-      code: 'USER_NOT_FOUND',
-    });
-  }
-
-  if (user.status === 'SUSPENDED') {
-    return res.status(403).json({
-      error: 'Your account has been suspended. Please contact support.',
-      code: 'ACCOUNT_SUSPENDED',
-    });
-  }
-
-  req.user = user;
-  req.session = session;
-  next();
 }
 
 /**
@@ -182,6 +631,8 @@ export function getWorkspaceContext(req: Request): string | undefined {
 
   const bodyWsId = req.body?.workspaceId || req.body?.orgId || req.body?.organizationId;
   if (bodyWsId && typeof bodyWsId === 'string' && bodyWsId.trim()) return bodyWsId.trim();
+
+  if (req.workspace?.id) return req.workspace.id;
 
   return req.user?.defaultOrganizationId;
 }

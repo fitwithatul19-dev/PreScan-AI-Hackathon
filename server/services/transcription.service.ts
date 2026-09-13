@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { getGeminiClient } from './gemini.service';
+import { parseGeminiJSON } from '../utils/jsonUtils';
+import { generateGeminiContent } from './gemini.service';
 
 export interface TranscriptSegment {
   startSeconds: number;
@@ -44,7 +45,6 @@ export class TranscriptionService {
     const fileBuffer = fs.readFileSync(audioFilePath);
     const base64Audio = fileBuffer.toString('base64');
 
-    const ai = getGeminiClient();
     const promptText = `Listen carefully to this audio track and perform precise speech-to-text transcription.
 Extract timestamped segments for all spoken dialogue.
 
@@ -62,37 +62,32 @@ Return ONLY a valid JSON object strictly matching this schema:
 
 If no spoken words exist in the audio, return empty segments array.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: base64Audio,
-              },
+    const contents = [
+      {
+        role: 'user',
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: base64Audio,
             },
-            {
-              text: promptText,
-            },
-          ],
-        },
-      ],
-      config: {
-        temperature: 0.1,
-        responseMimeType: 'application/json',
+          },
+          {
+            text: promptText,
+          },
+        ],
       },
-    });
+    ];
 
-    if (!response.text) {
-      throw new Error('Gemini audio transcription model returned empty response.');
-    }
+    const responseText = await generateGeminiContent({
+      contents,
+      temperature: 0.1,
+      responseMimeType: 'application/json',
+    });
 
     let parsed: any;
     try {
-      parsed = JSON.parse(response.text);
+      parsed = parseGeminiJSON(responseText);
     } catch (parseErr: any) {
       throw new Error(`Failed to parse transcription response from Gemini: ${parseErr.message}`);
     }

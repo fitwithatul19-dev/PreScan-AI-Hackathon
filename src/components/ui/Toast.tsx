@@ -7,10 +7,19 @@ export interface ToastMessage {
   type: 'success' | 'error' | 'info';
   title: string;
   description?: string;
+  message?: string;
+}
+
+interface ToastOptions {
+  type: 'success' | 'error' | 'info';
+  title: string;
+  description?: string;
+  message?: string;
 }
 
 interface ToastContextType {
-  toast: (message: Omit<ToastMessage, 'id'>) => void;
+  toast: (options: ToastOptions) => void;
+  showToast: (options: ToastOptions) => void;
   removeToast: (id: string) => void;
 }
 
@@ -19,9 +28,9 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const toast = (msg: Omit<ToastMessage, 'id'>) => {
+  const toast = (msg: ToastOptions) => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { ...msg, id }]);
+    setToasts((prev) => [...prev, { ...msg, description: msg.description || msg.message, id }]);
 
     // Auto dismiss after 4 seconds
     setTimeout(() => {
@@ -29,12 +38,14 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }, 4000);
   };
 
+  const showToast = toast;
+
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   return (
-    <ToastContext.Provider value={{ toast, removeToast }}>
+    <ToastContext.Provider value={{ toast, showToast, removeToast }}>
       {children}
       {/* Toast viewport */}
       <div

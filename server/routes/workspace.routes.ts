@@ -3,6 +3,7 @@ import { Router, Request, Response } from 'express';
 import { db, DbOrganization, DbMembership, DbInvitation, DbAuditLog } from '../db';
 import { requireAuth, requireWorkspaceMember, requireWorkspaceRole, generateId, generateSecureToken, sanitizeUser } from '../auth';
 import { EmailService } from '../services/email.service';
+import { EntitlementService } from '../services/entitlement.service';
 
 const router = Router();
 
@@ -429,7 +430,18 @@ router.post('/:id/invitations', requireAuth, requireWorkspaceMember, requireWork
   const cleanEmail = email.trim().toLowerCase();
   const assignedRole = role === 'ADMIN' ? 'ADMIN' : 'MEMBER';
 
-  // 1. Check if user is already a member of this workspace
+  // 1. Check workspace plan seat capacity
+  const seatCheck = EntitlementService.canAddMember(org.id);
+  if (!seatCheck.allowed) {
+    return res.status(403).json({
+      error: seatCheck.reason,
+      code: seatCheck.errorCode || 'MEMBER_LIMIT_REACHED',
+      currentCount: seatCheck.currentCount,
+      maxMembers: seatCheck.maxMembers,
+    });
+  }
+
+  // 2. Check if user is already a member of this workspace
   const existingUser = db.findUserByEmail(cleanEmail);
   if (existingUser) {
     const existingMembership = db.findMembership(org.id, existingUser.id);
@@ -441,7 +453,7 @@ router.post('/:id/invitations', requireAuth, requireWorkspaceMember, requireWork
     }
   }
 
-  // 2. Check for active pending invitation
+  // 3. Check for active pending invitation
   const existingInv = db.findActiveInvitationByEmail(org.id, cleanEmail);
   if (existingInv) {
     return res.status(400).json({
@@ -450,7 +462,7 @@ router.post('/:id/invitations', requireAuth, requireWorkspaceMember, requireWork
     });
   }
 
-  // 3. Generate raw token & SHA-256 token hash
+  // 4. Generate raw token & SHA-256 token hash
   const rawToken = generateSecureToken(32);
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const now = new Date();

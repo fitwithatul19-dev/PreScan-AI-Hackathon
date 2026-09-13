@@ -50,12 +50,24 @@ export interface YouTubeValidationResult {
   error?: string;
 }
 
+import { YouTubeMetadataService } from './youtubeMetadata.service';
+
 export interface ExtractedYouTubeMetadata {
   title: string;
   authorName: string;
   thumbnailUrl: string;
   providerUrl: string;
   videoId: string;
+  description?: string;
+  tags?: string[];
+  tagsCount?: number;
+  tagsUnavailable?: boolean;
+  channelId?: string;
+  publishedAt?: string;
+  durationSeconds?: number;
+  durationFormatted?: string;
+  category?: string;
+  regionsAllowed?: string[];
 }
 
 export class MediaIngestionService {
@@ -160,52 +172,43 @@ export class MediaIngestionService {
   }
 
   /**
-   * Fetch public YouTube video metadata via YouTube oEmbed API (safe, no API key required)
+   * Fetch complete real YouTube video metadata (tags, description, channel, date, duration)
    */
   public static async fetchYouTubeMetadata(videoId: string): Promise<ExtractedYouTubeMetadata | null> {
     try {
-      const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
-
-      const res = await fetch(oembedUrl, {
-        headers: {
-          'User-Agent': 'PreScan-Ingestion-Engine/1.0',
-        },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json() as {
-          title?: string;
-          author_name?: string;
-          thumbnail_url?: string;
-          provider_url?: string;
-        };
-
-        return {
-          title: data.title || `YouTube Video (${videoId})`,
-          authorName: data.author_name || 'YouTube Creator',
-          thumbnailUrl:
-            data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-          providerUrl: data.provider_url || 'https://www.youtube.com/',
-          videoId,
-        };
-      }
+      const fullMeta = await YouTubeMetadataService.fetchCompleteMetadata(videoId);
+      return {
+        title: fullMeta.title,
+        authorName: fullMeta.channelTitle,
+        thumbnailUrl: fullMeta.thumbnailUrl,
+        providerUrl: fullMeta.sourceUrl,
+        videoId: fullMeta.videoId,
+        description: fullMeta.description,
+        tags: fullMeta.tags,
+        tagsCount: fullMeta.tagsCount,
+        tagsUnavailable: fullMeta.tagsUnavailable,
+        channelId: fullMeta.channelId,
+        publishedAt: fullMeta.publishedAt,
+        durationSeconds: fullMeta.durationSeconds,
+        durationFormatted: fullMeta.durationFormatted,
+        category: fullMeta.category,
+        regionsAllowed: fullMeta.regionsAllowed,
+      };
     } catch (err) {
-      console.warn(`oEmbed fetch failed for videoId ${videoId}, falling back to direct thumbnail:`, err);
+      console.warn(`YouTube metadata extraction failed for videoId ${videoId}:`, err);
     }
 
-    // Safe fallback if oEmbed is unreachable or video is unlisted
+    // Safe fallback if extraction is unreachable or video is unlisted
     return {
       title: `YouTube Video (${videoId})`,
       authorName: 'YouTube Channel',
       thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
       providerUrl: 'https://www.youtube.com/',
       videoId,
+      tags: [],
+      tagsCount: 0,
+      tagsUnavailable: true,
+      durationSeconds: 0,
     };
   }
 
@@ -373,8 +376,8 @@ export class MediaIngestionService {
       createdAt: now,
     });
 
-    // Run asynchronous processing pipeline in background
-    MediaIngestionService.runFileIngestionPipeline(scanId, jobId, file, finalFilePath);
+    // Unified 9-stage pipeline is orchestrated by ScanPipelineService.startPipeline
+    // (triggered by the route handler)
 
     return { scan: initialScan, job: initialJob };
   }
@@ -461,9 +464,9 @@ export class MediaIngestionService {
       id: scanId,
       organizationId,
       title,
-      description: metadata.description || '',
-      category: metadata.category || 'entertainment',
-      tags: metadata.tags || [],
+      description: metadata.description || fetchedMeta?.description || '',
+      category: metadata.category || fetchedMeta?.category || 'entertainment',
+      tags: (metadata.tags && metadata.tags.length > 0) ? metadata.tags : (fetchedMeta?.tags || []),
       madeForKids: metadata.madeForKids ?? false,
       language: metadata.language || 'en',
       status: 'QUEUED',
@@ -472,7 +475,7 @@ export class MediaIngestionService {
         checkAdvertiserSuitability: metadata.checkAdvertiserSuitability ?? true,
         checkCopyrightSignals: metadata.checkCopyrightSignals ?? true,
         checkMetadataIntegrity: metadata.checkMetadataIntegrity ?? true,
-        targetCategory: metadata.category,
+        targetCategory: metadata.category || fetchedMeta?.category,
         targetLanguage: metadata.language,
         sensitivityLevel: metadata.sensitivityLevel || 'STANDARD',
       },
@@ -487,7 +490,12 @@ export class MediaIngestionService {
         youtubeUrl: validation.normalizedUrl,
         thumbnailUrl,
         channelTitle: fetchedMeta?.authorName || 'YouTube Creator',
+        channelId: fetchedMeta?.channelId,
+        durationSeconds: fetchedMeta?.durationSeconds,
         format: 'YouTube Stream',
+        publishedAt: fetchedMeta?.publishedAt,
+        category: fetchedMeta?.category,
+        tagsUnavailable: fetchedMeta?.tagsUnavailable,
       },
       ingestionJobId: jobId,
       progressPercent: 10,
@@ -517,8 +525,8 @@ export class MediaIngestionService {
       createdAt: now,
     });
 
-    // Run asynchronous processing pipeline in background
-    MediaIngestionService.runYouTubeIngestionPipeline(scanId, jobId, videoId, fetchedMeta);
+    // Unified 9-stage pipeline is orchestrated by ScanPipelineService.startPipeline
+    // (triggered by the route handler)
 
     return { scan: initialScan, job: initialJob };
   }
@@ -664,7 +672,7 @@ export class MediaIngestionService {
         currentStep: 'Extracting public audio stream and thumbnail assets from YouTube source',
       });
 
-      // Phase 05.1: Pass public YouTube URL directly to Gemini instead of downloading via yt-dlp
+      // Pass public YouTube URL directly to Gemini instead of downloading via yt-dlp
       const currentScan = db.findScanById(scanId);
       if (currentScan) {
         const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;

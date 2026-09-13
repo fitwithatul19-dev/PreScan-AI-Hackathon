@@ -10,6 +10,9 @@ import {
   MAX_FILE_SIZE_BYTES,
 } from '../services/mediaIngestion.service';
 import { AnalysisEngineService } from '../services/analysisEngine.service';
+import { EntitlementService } from '../services/entitlement.service';
+import { ScanPipelineService, SCAN_ERROR_CODES } from '../services/scanPipeline.service';
+import { TEST_SAMPLES } from '../services/testSamples.service';
 
 const router = Router();
 
@@ -50,6 +53,7 @@ const upload = multer({
 function getTargetOrganizationId(req: Request): string | null {
   const headerOrgId = (req.headers['x-workspace-id'] || req.headers['x-organization-id']) as string;
   if (headerOrgId && headerOrgId.trim()) return headerOrgId.trim();
+  if (req.workspace?.id) return req.workspace.id;
   const user = req.user;
   if (!user) return null;
   if (user.defaultOrganizationId) return user.defaultOrganizationId;
@@ -100,7 +104,7 @@ router.post('/youtube/validate', requireAuth, async (req: Request, res: Response
 router.post(
   '/upload',
   requireAuth,
-  upload.single('file'),
+  upload.single('file') as any,
   async (req: Request, res: Response) => {
     try {
       const user = req.user!;
@@ -119,7 +123,22 @@ router.post(
         if (req.file?.path && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
-        return res.status(403).json({ error: 'You are not a member of this workspace.' });
+        return res.status(403).json({ error: 'You are not a member of this workspace.', code: 'FORBIDDEN_WORKSPACE' });
+      }
+
+      // Check workspace plan entitlement for new scans
+      const entitlement = EntitlementService.canCreateScan(orgId);
+      if (!entitlement.allowed) {
+        if (req.file?.path && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        return res.status(403).json({
+          error: entitlement.reason,
+          code: entitlement.errorCode || 'PLAN_LIMIT_REACHED',
+          limits: entitlement.limits,
+          usage: entitlement.usage,
+          plan: entitlement.plan,
+        });
       }
 
       if (!req.file) {
@@ -157,6 +176,11 @@ router.post(
         metadata: metadata as any,
       });
 
+      // Automatically trigger unified end-to-end processing pipeline
+      ScanPipelineService.startPipeline(result.scan.id, orgId, user.id).catch((err) => {
+        console.error('ScanPipeline file startup error:', err);
+      });
+
       return res.status(201).json({
         success: true,
         scan: result.scan,
@@ -189,7 +213,19 @@ router.post('/youtube', requireAuth, async (req: Request, res: Response) => {
 
     const membership = db.findMembership(orgId, user.id);
     if (!membership) {
-      return res.status(403).json({ error: 'You are not a member of this workspace.' });
+      return res.status(403).json({ error: 'You are not a member of this workspace.', code: 'FORBIDDEN_WORKSPACE' });
+    }
+
+    // Check workspace plan entitlement for new scans
+    const entitlement = EntitlementService.canCreateScan(orgId);
+    if (!entitlement.allowed) {
+      return res.status(403).json({
+        error: entitlement.reason,
+        code: entitlement.errorCode || 'PLAN_LIMIT_REACHED',
+        limits: entitlement.limits,
+        usage: entitlement.usage,
+        plan: entitlement.plan,
+      });
     }
 
     const { url, metadata = {} } = req.body;
@@ -227,6 +263,11 @@ router.post('/youtube', requireAuth, async (req: Request, res: Response) => {
       metadata: parsedMeta as any,
     });
 
+    // Automatically trigger unified end-to-end processing pipeline
+    ScanPipelineService.startPipeline(result.scan.id, orgId, user.id).catch((err) => {
+      console.error('ScanPipeline YouTube startup error:', err);
+    });
+
     return res.status(201).json({
       success: true,
       scan: result.scan,
@@ -237,6 +278,123 @@ router.post('/youtube', requireAuth, async (req: Request, res: Response) => {
     return res.status(400).json({
       error: err?.message || 'Failed to ingest YouTube video URL.',
     });
+  }
+});
+
+/**
+ * POST /api/scans/sample
+ * Ingest built-in sample test fixture for testing realistic QA scenarios
+ */
+router.post('/sample', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const orgId = req.body.organizationId || getTargetOrganizationId(req);
+
+    if (!orgId) {
+      return res.status(400).json({ error: 'Workspace organization context is required.' });
+    }
+
+    const membership = db.findMembership(orgId, user.id);
+    if (!membership) {
+      return res.status(403).json({ error: 'You are not a member of this workspace.', code: 'FORBIDDEN_WORKSPACE' });
+    }
+
+    const sampleId = req.body.sampleId;
+    const sample = TEST_SAMPLES[sampleId];
+    if (!sample) {
+      return res.status(400).json({ error: `Invalid sample ID: ${sampleId}` });
+    }
+
+    // Check workspace plan entitlement for new scans
+    const entitlement = EntitlementService.canCreateScan(orgId);
+    if (!entitlement.allowed) {
+      return res.status(403).json({
+        error: entitlement.reason,
+        code: entitlement.errorCode || 'PLAN_LIMIT_REACHED',
+        limits: entitlement.limits,
+        usage: entitlement.usage,
+        plan: entitlement.plan,
+      });
+    }
+
+    const scanId = `scan_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const jobId = `ingest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const now = new Date().toISOString();
+
+    const initialJob = db.createIngestionJob({
+      id: jobId,
+      scanId,
+      organizationId: orgId,
+      status: 'QUEUED',
+      sourceType: 'file',
+      sourceDetails: {
+        fileName: `${sample.id}.mp4`,
+      },
+      progressPercent: 5,
+      currentStep: 'Loading realistic test fixture scenario...',
+      logs: [{ timestamp: now, level: 'INFO', message: `Test scenario initialized: ${sample.name}` }],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const initialScan = db.createScan({
+      id: scanId,
+      organizationId: orgId,
+      title: sample.title,
+      description: sample.description,
+      category: sample.category,
+      tags: sample.tags,
+      madeForKids: sample.madeForKids,
+      language: sample.language,
+      status: 'QUEUED',
+      stage: 'QUEUED',
+      config: {
+        checkCommunityGuidelines: true,
+        checkAdvertiserSuitability: true,
+        checkCopyrightSignals: true,
+        checkMetadataIntegrity: true,
+        targetCategory: sample.category,
+        targetLanguage: sample.language,
+        sensitivityLevel: 'STANDARD',
+      },
+      sourceType: 'file',
+      source: {
+        type: 'file',
+        fileName: `${sample.id}.mp4`,
+      },
+      mediaInfo: {
+        fileName: `${sample.id}.mp4`,
+        durationSeconds: sample.durationSeconds,
+        channelTitle: 'PreScan Test Suite',
+        format: 'Preset Audio Stream',
+        storagePath: undefined,
+      } as any,
+      ingestionJobId: jobId,
+      progressPercent: 5,
+      currentStepMessage: 'Queued test sample analysis...',
+      overallRisk: 'INSUFFICIENT_DATA',
+      initiatedById: user.id,
+      startedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Tag the scan object for sample pipeline
+    (initialScan as any).testSampleId = sampleId;
+
+    // Launch pipeline
+    ScanPipelineService.startPipeline(scanId, orgId, user.id).catch((err) => {
+      console.error('ScanPipeline sample startup error:', err);
+    });
+
+    return res.status(201).json({
+      success: true,
+      scan: initialScan,
+      job: initialJob,
+    });
+  } catch (err: any) {
+    console.error('Sample ingestion error:', err);
+    return res.status(500).json({ error: err?.message || 'Failed to start sample test scan.' });
   }
 });
 
@@ -423,8 +581,49 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/scans/:id/retry
+ * Retry a failed or incomplete scan through the unified pipeline
+ */
+router.post('/:id/retry', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const scanId = req.params.id;
+
+    const scan = db.findScanById(scanId);
+    if (!scan) {
+      return res.status(404).json({ error: 'Scan not found.' });
+    }
+
+    // Verify workspace membership
+    const membership = db.findMembership(scan.organizationId, user.id);
+    if (!membership) {
+      return res.status(403).json({ error: 'Access denied to this workspace scan.' });
+    }
+
+    if (scan.attempts && scan.attempts >= 3) {
+      return res.status(400).json({
+        error: 'Maximum retry limit (3 attempts) reached for this scan.',
+        code: 'MAX_RETRIES_REACHED',
+      });
+    }
+
+    const updatedScan = await ScanPipelineService.startPipeline(scanId, scan.organizationId, user.id);
+
+    return res.json({
+      success: true,
+      scan: updatedScan,
+    });
+  } catch (err: any) {
+    console.error('Retry scan error:', err);
+    return res.status(400).json({
+      error: err?.message || 'Failed to retry scan.',
+    });
+  }
+});
+
+/**
  * POST /api/scans/:id/analyze
- * Trigger or retry PreScan AI analysis on scan
+ * Trigger or resume PreScan AI analysis on scan
  */
 router.post('/:id/analyze', requireAuth, async (req: Request, res: Response) => {
   try {
@@ -442,7 +641,7 @@ router.post('/:id/analyze', requireAuth, async (req: Request, res: Response) => 
       return res.status(403).json({ error: 'Access denied to this workspace scan.' });
     }
 
-    const { job, scan: updatedScan } = await AnalysisEngineService.startScanAnalysis(
+    const updatedScan = await ScanPipelineService.startPipeline(
       scanId,
       scan.organizationId,
       user.id
@@ -450,7 +649,6 @@ router.post('/:id/analyze', requireAuth, async (req: Request, res: Response) => 
 
     return res.json({
       success: true,
-      job,
       scan: updatedScan,
     });
   } catch (err: any) {
@@ -517,22 +715,136 @@ router.get('/:id/report', requireAuth, async (req: Request, res: Response) => {
 
     const dbReport = db.findPreScanReportByScanId(scanId);
     const dbTranscript = db.findTranscriptByScanId(scanId);
+    const dbReviews = db.findFindingReviewsByScanId(scanId);
 
     if (!dbReport) {
       return res.status(404).json({
         error: 'PreScan report not found. Analysis may still be in progress or failed.',
         scan,
         report: null,
+        reviews: [],
       });
     }
+
+    // Enrich reviews with user details for team review persistence display
+    const enrichedReviews = dbReviews.map((rev) => {
+      const reviewer = rev.reviewedByUserId ? db.findUserById(rev.reviewedByUserId) : undefined;
+      return {
+        ...rev,
+        reviewerName: reviewer ? (reviewer.displayName || reviewer.fullName || reviewer.email) : undefined,
+      };
+    });
 
     return res.json({
       scan,
       report: dbReport.report,
       transcript: dbTranscript || null,
+      reviews: enrichedReviews,
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to retrieve PreScan report.' });
+  }
+});
+
+/**
+ * GET /api/scans/:id/reviews
+ * Retrieve review state & creator notes for all findings in a scan
+ */
+router.get('/:id/reviews', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const scanId = req.params.id;
+
+    const scan = db.findScanById(scanId);
+    if (!scan) {
+      return res.status(404).json({ error: 'Scan not found.' });
+    }
+
+    const membership = db.findMembership(scan.organizationId, user.id);
+    if (!membership) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    const reviews = db.findFindingReviewsByScanId(scanId);
+    const enrichedReviews = reviews.map((rev) => {
+      const reviewer = rev.reviewedByUserId ? db.findUserById(rev.reviewedByUserId) : undefined;
+      return {
+        ...rev,
+        reviewerName: reviewer ? (reviewer.displayName || reviewer.fullName || reviewer.email) : undefined,
+      };
+    });
+
+    return res.json({ reviews: enrichedReviews });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch finding reviews.' });
+  }
+});
+
+/**
+ * PUT /api/scans/:id/reviews/:findingId
+ * Update creator review status and notes for a specific finding (workspace isolated)
+ */
+router.put('/:id/reviews/:findingId', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const { id: scanId, findingId } = req.params;
+    const { reviewStatus, creatorNote } = req.body;
+
+    const scan = db.findScanById(scanId);
+    if (!scan) {
+      return res.status(404).json({ error: 'Scan not found.' });
+    }
+
+    // Strict workspace membership authorization check (IDOR Protection)
+    const membership = db.findMembership(scan.organizationId, user.id);
+    if (!membership) {
+      return res.status(403).json({ error: 'Access denied to update finding review for this workspace scan.' });
+    }
+
+    const validStatuses = ['OPEN', 'REVIEWED', 'NEEDS_EDIT', 'NOT_APPLICABLE'];
+    if (reviewStatus && !validStatuses.includes(reviewStatus)) {
+      return res.status(400).json({ error: `Invalid review status. Allowed: ${validStatuses.join(', ')}` });
+    }
+
+    // XSS Sanitization helper for creatorNote text
+    const sanitizedNote = typeof creatorNote === 'string'
+      ? creatorNote.replace(/</g, '&lt;').replace(/>/g, '&gt;').trim()
+      : undefined;
+
+    const updatedReview = db.upsertFindingReview({
+      scanId,
+      findingId,
+      organizationId: scan.organizationId,
+      reviewStatus: reviewStatus || 'REVIEWED',
+      creatorNote: sanitizedNote,
+      reviewedByUserId: user.id,
+    });
+
+    // Record audit log
+    db.createAuditLog({
+      id: `audit_${Date.now()}`,
+      organizationId: scan.organizationId,
+      actorUserId: user.id,
+      action: 'FINDING_REVIEWED',
+      targetResourceType: 'SCAN_FINDING',
+      targetResourceId: `${scanId}_${findingId}`,
+      metadataJson: JSON.stringify({ reviewStatus: updatedReview.reviewStatus, noteLength: sanitizedNote?.length || 0 }),
+      createdAt: new Date().toISOString(),
+    });
+
+    const reviewer = db.findUserById(user.id);
+    const responsePayload = {
+      ...updatedReview,
+      reviewerName: reviewer ? (reviewer.displayName || reviewer.fullName || reviewer.email) : undefined,
+    };
+
+    return res.json({
+      success: true,
+      review: responsePayload,
+    });
+  } catch (err: any) {
+    console.error('Update finding review error:', err);
+    return res.status(500).json({ error: 'Failed to update finding review state.' });
   }
 });
 

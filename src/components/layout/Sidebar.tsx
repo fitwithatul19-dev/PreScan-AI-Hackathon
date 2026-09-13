@@ -3,14 +3,8 @@ import {
   LayoutDashboard,
   PlusCircle,
   History,
-  FileCheck2,
-  FolderKanban,
-  Users2,
-  Plug2,
-  CreditCard,
   Settings,
   Sparkles,
-  Palette,
   X,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
@@ -58,55 +52,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       href: '/app/scans',
       icon: <History className="w-4 h-4" />,
     },
-    {
-      id: 'reports',
-      label: 'Reports',
-      href: '/app/reports',
-      icon: <FileCheck2 className="w-4 h-4" />,
-    },
-    {
-      id: 'projects',
-      label: 'Projects',
-      href: '/app/projects',
-      icon: <FolderKanban className="w-4 h-4" />,
-    },
   ];
 
   const managementNavItems: NavItem[] = [
-    {
-      id: 'team',
-      label: 'Team & Access',
-      href: '/app/team',
-      icon: <Users2 className="w-4 h-4" />,
-    },
-    {
-      id: 'integrations',
-      label: 'Integrations',
-      href: '/app/integrations',
-      icon: <Plug2 className="w-4 h-4" />,
-      badge: 'YouTube',
-    },
-    {
-      id: 'billing',
-      label: 'Billing & Plans',
-      href: '/app/billing',
-      icon: <CreditCard className="w-4 h-4" />,
-    },
     {
       id: 'settings',
       label: 'Settings',
       href: '/app/settings',
       icon: <Settings className="w-4 h-4" />,
-    },
-  ];
-
-  const developerNavItems: NavItem[] = [
-    {
-      id: 'design-system',
-      label: 'Design System & UI',
-      href: '/app/design-system',
-      icon: <Palette className="w-4 h-4" />,
-      badge: 'Phase 01',
     },
   ];
 
@@ -186,12 +139,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="font-bold text-sm tracking-tight text-neutral-900">
                   Pre<span className="text-neutral-500">Scan</span>
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-neutral-100 text-neutral-600 rounded border border-neutral-200">
-                  v0.1
-                </span>
               </div>
               <p className="text-[10px] text-neutral-400 font-medium">
-                QA for YouTube Creators
+                QA & Policy Review
               </p>
             </div>
           </button>
@@ -223,16 +173,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div>
             <div className="px-3 mb-2 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
-              Workspace Management
+              Settings & Preferences
             </div>
             {renderNavList(managementNavItems)}
-          </div>
-
-          <div>
-            <div className="px-3 mb-2 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
-              Foundation Inspection
-            </div>
-            {renderNavList(developerNavItems)}
           </div>
         </div>
 

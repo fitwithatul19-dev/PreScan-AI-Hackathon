@@ -36,14 +36,6 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ currentRoute, onNavi
 
   const handleNav = (route: string) => {
     setMobileMenuOpen(false);
-    const sectionByRoute: Record<string, string> = {
-      [ROUTES.FEATURES]: 'features',
-      [ROUTES.HOW_IT_WORKS]: 'workflow',
-    };
-    if (currentRoute === ROUTES.HOME && sectionByRoute[route]) {
-      document.getElementById(sectionByRoute[route])?.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
     onNavigate(route);
   };
 
@@ -84,7 +76,7 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ currentRoute, onNavi
                 key={link.route}
                 onClick={() => handleNav(link.route)}
                 className={`transition-colors py-1 hover:text-neutral-900 ${
-                  isActive ? 'text-neutral-900 font-semibold border-b-2 border-neutral-900 -mb-0.5' : ''
+                  isActive ? 'text-neutral-900 font-semibold border-b-2 border-neutral-900 -mb-[2px]' : ''
                 }`}
               >
                 {link.label}

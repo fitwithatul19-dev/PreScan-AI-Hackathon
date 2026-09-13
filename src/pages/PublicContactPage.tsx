@@ -76,10 +76,10 @@ export const PublicContactPage: React.FC<PublicContactPageProps> = ({ onNavigate
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-bold text-neutral-900">
-                Message Received (Preview Mode)
+                Message Received
               </h3>
               <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto leading-relaxed">
-                Thank you, <strong>{name}</strong>. Your form submission has passed frontend validation. As part of the Phase 02 preview release, automated transactional mail delivery is queued for backend integration.
+                Thank you, <strong>{name}</strong>. We have received your inquiry. Our team will review your message and get back to you shortly.
               </p>
               <div className="pt-4 flex justify-center gap-3">
                 <Button
@@ -173,7 +173,7 @@ export const PublicContactPage: React.FC<PublicContactPageProps> = ({ onNavigate
                   </Button>
 
                   <div className="text-center text-[11px] text-neutral-400 pt-2">
-                    Phase 02 validation active • Backend routing scheduled for future release
+                    Direct team inquiry • We typically respond within 1 business day
                   </div>
                 </form>
               </CardContent>

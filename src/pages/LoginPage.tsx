@@ -1,33 +1,67 @@
-import React, { useState } from 'react';
-import { Sparkles, ArrowLeft, Shield, Eye, EyeOff, Lock, AlertCircle, ArrowRight, Mail, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, ArrowLeft, Shield, Eye, EyeOff, Lock, AlertCircle, ArrowRight, Mail, RefreshCw, MailCheck } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../router/routes';
+import { supabase, signInWithGoogle } from '../supabaseClient';
 
 interface LoginPageProps {
   onNavigate: (route: string) => void;
+  initialEmail?: string;
+  verificationMessage?: string;
   returnTo?: string;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, returnTo }) => {
-  const { login, resendVerification } = useAuth();
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, initialEmail, verificationMessage, returnTo }) => {
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [verificationBanner, setVerificationBanner] = useState<string | null>(verificationMessage || null);
   const [error, setError] = useState<string | null>(null);
 
-  // Unverified email state
-  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
-  const [resending, setResending] = useState(false);
-  const [resendSuccessMessage, setResendSuccessMessage] = useState<string | null>(null);
+  useEffect(() => {
+    // Check URL parameters for registered email & verification message
+    const searchString = typeof window !== 'undefined' ? window.location.search : '';
+    const urlParams = new URLSearchParams(searchString);
+    const emailParam = urlParams.get('email') || initialEmail || '';
+    const isRegistered = urlParams.get('registered') === 'true' || Boolean(verificationMessage);
+    const msgParam = urlParams.get('msg') || verificationMessage;
+
+    if (emailParam) {
+      setEmail(decodeURIComponent(emailParam));
+    }
+    setPassword(''); // Password must remain completely empty
+
+    if (isRegistered || msgParam) {
+      setVerificationBanner(
+        msgParam
+          ? decodeURIComponent(msgParam)
+          : 'Your account has been created. Please check your email and verify your address before logging in.'
+      );
+    }
+  }, [initialEmail, verificationMessage]);
+
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      setError(null);
+      await signInWithGoogle();
+    } catch (err: any) {
+      setError(err?.message || 'Unable to sign in with Google. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setError('Please enter your email and password.');
       return;
     }
@@ -35,37 +69,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, returnTo }) =>
     try {
       setLoading(true);
       setError(null);
-      setUnverifiedEmail(null);
-      setResendSuccessMessage(null);
 
-      const result = await login({ email: email.trim(), password });
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-      if (result.unverified) {
-        setUnverifiedEmail(result.email || email.trim());
+      if (signInError) {
+        setError(signInError.message || 'Invalid email or password');
         return;
       }
 
-      // If returnTo is valid and safe (starts with /app), navigate there; otherwise dashboard
-      const target = returnTo && returnTo.startsWith('/app') ? returnTo : ROUTES.DASHBOARD;
-      onNavigate(target);
+      // Check if real session exists
+      let session = data?.session;
+      if (!session) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        session = sessionData?.session;
+      }
+
+      if (!session) {
+        setError('Check your email and confirm your account before logging in.');
+        return;
+      }
+
+      window.location.href = '/';
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in. Please verify your credentials.');
+      setError(err?.message || 'Unable to sign in. Please check your credentials and try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleResendForUnverified = async () => {
-    if (!unverifiedEmail) return;
-    try {
-      setResending(true);
-      setError(null);
-      const res = await resendVerification(unverifiedEmail);
-      setResendSuccessMessage(res.message);
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend verification code.');
-    } finally {
-      setResending(false);
     }
   };
 
@@ -95,61 +126,77 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, returnTo }) =>
           </p>
         </div>
 
-        {/* Unverified Email Warning Banner */}
-        {unverifiedEmail && (
-          <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-3 shadow-xs animate-in fade-in-50">
-            <div className="flex items-start gap-2.5">
-              <Mail className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1 text-left">
-                <h4 className="text-xs font-bold text-amber-900">
-                  Please verify your email before logging in.
+        {verificationBanner && (
+          <div className="bg-emerald-50 border border-emerald-300/80 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-emerald-600 text-white rounded-lg shrink-0 mt-0.5">
+                <MailCheck className="w-4 h-4" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                  Email Verification Required
                 </h4>
-                <p className="text-[11px] text-amber-700 leading-relaxed">
-                  We sent a 6-digit verification code to <span className="font-semibold">{unverifiedEmail}</span>. Verify your email to access your workspace.
+                <p className="text-xs text-emerald-900 leading-relaxed font-medium">
+                  {verificationBanner}
+                </p>
+                <p className="text-[11px] text-emerald-800 pt-0.5">
+                  We prefilled your email below. Enter your password once verified.
                 </p>
               </div>
-            </div>
-
-            {resendSuccessMessage && (
-              <div className="text-[11px] text-emerald-700 bg-emerald-100/60 p-2 rounded font-medium">
-                {resendSuccessMessage}
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-2 pt-1">
-              <Button
-                variant="primary"
-                size="sm"
-                className="justify-center text-xs flex-1"
-                onClick={() => onNavigate(`${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(unverifiedEmail)}`)}
-                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-              >
-                Verify Email
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-center text-xs flex-1"
-                onClick={handleResendForUnverified}
-                isLoading={resending}
-                disabled={resending}
-                leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-              >
-                Resend Code
-              </Button>
             </div>
           </div>
         )}
 
-        {error && !unverifiedEmail && (
+        {error && (
           <Alert variant="error" title="Authentication Error">
             {error}
           </Alert>
         )}
 
         <Card className="bg-white shadow-sm border-neutral-200">
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="pt-6 space-y-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full justify-center text-xs font-semibold border-neutral-300 hover:bg-neutral-50 text-neutral-800"
+              onClick={handleGoogleLogin}
+              isLoading={googleLoading}
+              disabled={loading || googleLoading}
+              leftIcon={
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.29v3.15C3.26 21.3 7.31 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.29C.47 8.21 0 10.05 0 12s.47 3.79 1.29 5.42l3.99-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.58l3.99 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+              }
+            >
+              {googleLoading ? 'Connecting to Google...' : 'Continue with Google'}
+            </Button>
+
+            <div className="relative flex items-center justify-center my-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-neutral-200" />
+              </div>
+              <div className="relative bg-white px-3 text-[11px] font-medium text-neutral-400 uppercase tracking-wider">
+                or sign in with email
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <Input
                 label="Creator Email"
                 type="email"
@@ -158,7 +205,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, returnTo }) =>
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (error) setError(null);
-                  if (unverifiedEmail) setUnverifiedEmail(null);
                 }}
                 required
                 autoFocus
@@ -185,7 +231,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, returnTo }) =>
                     onChange={(e) => {
                       setPassword(e.target.value);
                       if (error) setError(null);
-                      if (unverifiedEmail) setUnverifiedEmail(null);
                     }}
                     required
                   />
@@ -200,6 +245,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, returnTo }) =>
                 </div>
               </div>
 
+              {error && (
+                <p className="text-xs text-rose-600 font-medium pt-1">
+                  {error}
+                </p>
+              )}
+
               <Button
                 type="submit"
                 variant="primary"
@@ -211,33 +262,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, returnTo }) =>
                 Sign In to Workspace
               </Button>
             </form>
-
-            <div className="mt-4 pt-4 border-t border-neutral-100 space-y-2.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full justify-center text-xs border-dashed border-neutral-300 hover:border-neutral-900 bg-neutral-50/50"
-                onClick={async () => {
-                  setEmail('creator@prescan.dev');
-                  setPassword('Password123!');
-                  try {
-                    setLoading(true);
-                    setError(null);
-                    setUnverifiedEmail(null);
-                    await login({ email: 'creator@prescan.dev', password: 'Password123!' });
-                    const target = returnTo && returnTo.startsWith('/app') ? returnTo : ROUTES.DASHBOARD;
-                    onNavigate(target);
-                  } catch (err: any) {
-                    setError(err.message || 'Demo login failed.');
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                ⚡ 1-Click Demo Account (Alex Creator)
-              </Button>
-            </div>
           </CardContent>
 
           <CardFooter className="flex flex-col gap-3 text-center text-xs text-neutral-500 pt-2 pb-5 border-t border-neutral-100">

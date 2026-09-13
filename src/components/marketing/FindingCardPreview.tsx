@@ -225,7 +225,7 @@ export const FindingCardPreview: React.FC = () => {
         )}
 
         <div className="pt-4 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-400">
-          <span>Illustrative example findings • For demonstration purposes only</span>
+          <span>Sample compliance finding card</span>
           <span>PreScan heuristics are conservative by design</span>
         </div>
       </div>

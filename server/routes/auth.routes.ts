@@ -53,7 +53,6 @@ const forgotPasswordLimiter = rateLimit({
  */
 function getComputedAuthStatus(user: { emailVerified: boolean; status: string }, userId: string) {
   if (user.status === 'SUSPENDED') return 'SUSPENDED';
-  if (!user.emailVerified) return 'AUTHENTICATED_UNVERIFIED';
   const onboarding = db.getOnboarding(userId);
   if (onboarding.status !== 'COMPLETED') return 'AUTHENTICATED_ONBOARDING';
   return 'AUTHENTICATED_READY';
@@ -130,7 +129,7 @@ router.post('/signup', signupLimiter, async (req: Request, res: Response) => {
       email: normalizedEmail,
       fullName: fullName.trim(),
       displayName: fullName.trim(),
-      emailVerified: false,
+      emailVerified: true,
       passwordHash: hash,
       passwordSalt: salt,
       status: 'ACTIVE',
@@ -141,35 +140,13 @@ router.post('/signup', signupLimiter, async (req: Request, res: Response) => {
       lastLoginAt: now,
     });
 
-    // Generate 6-digit OTP challenge
-    const { rawOtp, expiresAt } = generateAndStoreOtpChallenge(userId, normalizedEmail);
-
-    // Also generate link fallback token
-    const verifyToken = generateSecureToken(32);
-    const verifyExpiresAt = new Date(Date.now() + VERIFY_TOKEN_DURATION_MS).toISOString();
-    db.createVerificationToken({
-      token: verifyToken,
-      userId,
-      email: normalizedEmail,
-      expiresAt: verifyExpiresAt,
-      createdAt: now,
-    });
-
-    // Send email via EmailService
-    await EmailService.sendVerificationOtp({
-      email: normalizedEmail,
-      code: rawOtp,
-      expiresInMinutes: 10,
-      userName: fullName.trim(),
-    });
-
     // Initialize onboarding
     db.updateOnboarding(userId, {
       step: 1,
       status: 'IN_PROGRESS',
     });
 
-    // Create unverified session
+    // Create authenticated session
     const sessionToken = generateSecureToken(32);
     const sessionExpiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
     db.createSession({
@@ -202,9 +179,9 @@ router.post('/signup', signupLimiter, async (req: Request, res: Response) => {
 
     return res.status(201).json({
       user: sanitizeUser(newUser),
-      authStatus: 'AUTHENTICATED_UNVERIFIED',
+      authStatus: 'AUTHENTICATED_ONBOARDING',
       sessionToken,
-      message: 'Account created successfully. A 6-digit verification code has been sent to your email.',
+      message: 'Account created successfully. Directing to workspace onboarding...',
     });
   } catch (err: any) {
     console.error('Signup error:', err);
@@ -224,7 +201,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const user = db.findUserByEmail(normalizedEmail);
+    let user = db.findUserByEmail(normalizedEmail);
 
     if (!user || user.status === 'DELETED') {
       return res.status(401).json({
@@ -250,49 +227,9 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
 
-    // Check if user is unverified
+    // Ensure user is verified so they can proceed directly
     if (!user.emailVerified) {
-      // Ensure an active OTP challenge exists; if not or expired, create a fresh one and dispatch email
-      let activeChallenge = db.findActiveOtpChallenge(user.id);
-      if (!activeChallenge) {
-        const { rawOtp } = generateAndStoreOtpChallenge(user.id, user.email);
-        await EmailService.sendVerificationOtp({
-          email: user.email,
-          code: rawOtp,
-          expiresInMinutes: 10,
-          userName: user.fullName || user.displayName,
-        });
-      }
-
-      // Create session for the unverified user so they are authenticated into the verification view
-      const sessionToken = generateSecureToken(32);
-      const sessionExpiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
-      db.createSession({
-        token: sessionToken,
-        userId: user.id,
-        expiresAt: sessionExpiresAt,
-        createdAt: now,
-        userAgent: req.headers['user-agent'],
-        ipAddress: req.ip,
-      });
-
-      res.cookie('prescan_session', sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: SESSION_DURATION_MS,
-        path: '/',
-      });
-
-      return res.status(403).json({
-        error: 'Please verify your email before logging in.',
-        code: 'UNVERIFIED_EMAIL',
-        unverified: true,
-        email: user.email,
-        sessionToken,
-        user: sanitizeUser(user),
-        authStatus: 'AUTHENTICATED_UNVERIFIED',
-      });
+      user = db.updateUser(user.id, { emailVerified: true })!;
     }
 
     // Update lastLoginAt

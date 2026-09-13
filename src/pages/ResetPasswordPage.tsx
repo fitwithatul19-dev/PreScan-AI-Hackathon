@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../router/routes';
+import { apiFetch } from '../lib/api';
 
 interface ResetPasswordPageProps {
   onNavigate: (route: string) => void;
@@ -31,28 +32,27 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onNavigate
 
   // Validate token on mount
   useEffect(() => {
-    if (!token) {
-      setValidatingToken(false);
-      setTokenValid(false);
-      setTokenError('No password reset token was provided.');
-      return;
-    }
-
     const checkToken = async () => {
       try {
         setValidatingToken(true);
-        const res = await fetch(`/api/auth/validate-reset-token?token=${encodeURIComponent(token)}`);
-        const data = await res.json();
-        if (res.ok && data.valid) {
-          setTokenValid(true);
-          setTokenEmail(data.email || '');
+
+        if (token) {
+          const res = await apiFetch(`/api/auth/validate-reset-token?token=${encodeURIComponent(token)}`);
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.valid) {
+            setTokenValid(true);
+            setTokenEmail(data.email || '');
+          } else {
+            setTokenValid(false);
+            setTokenError(data.error || 'This password reset link is invalid or has expired.');
+          }
         } else {
           setTokenValid(false);
-          setTokenError(data.error || 'This password reset link is invalid or has expired.');
+          setTokenError('No valid password reset link or token was found.');
         }
       } catch {
         setTokenValid(false);
-        setTokenError('Failed to validate reset link. Please try again.');
+        setTokenError('Failed to validate password reset link. Please try requesting a new one.');
       } finally {
         setValidatingToken(false);
       }
@@ -79,10 +79,10 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onNavigate
     try {
       setLoading(true);
       setError(null);
-      await resetPassword({ token, newPassword });
+      await resetPassword({ token: token || undefined, newPassword });
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password.');
+      setError(err.message || 'Failed to update password.');
     } finally {
       setLoading(false);
     }

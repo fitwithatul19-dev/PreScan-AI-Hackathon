@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowLeft, KeyRound, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Sparkles, ArrowLeft, KeyRound, Mail, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
@@ -18,7 +18,6 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onNaviga
   const [submitted, setSubmitted] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [devResetMail, setDevResetMail] = useState<{ token: string; actionUrl: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,17 +32,6 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onNaviga
       const res = await forgotPassword(email.trim());
       setMessage(res.message);
       setSubmitted(true);
-
-      // Dev helper fetch
-      try {
-        const mailRes = await fetch(`/api/auth/dev/latest-email?email=${encodeURIComponent(email.trim())}&type=RESET_PASSWORD`);
-        if (mailRes.ok) {
-          const mailData = await mailRes.json();
-          if (mailData.mail) setDevResetMail(mailData.mail);
-        }
-      } catch {
-        // Ignore
-      }
     } catch (err: any) {
       setError(err.message || 'Failed to submit password reset request.');
     } finally {
@@ -92,31 +80,6 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onNaviga
                   {message || 'If an account exists with this email address, you will receive password reset instructions shortly.'}
                 </p>
               </div>
-
-              {devResetMail && (
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-left text-xs mt-3">
-                  <div className="flex items-center justify-between font-semibold text-emerald-800 mb-1">
-                    <span className="flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>Dev Reset Helper</span>
-                    </span>
-                    <span className="text-[10px] text-emerald-600 font-mono">1-Click Test</span>
-                  </div>
-                  <p className="text-[11px] text-emerald-700 mb-2">
-                    In development mode, token link is captured below for immediate testing:
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onNavigate(`/reset-password?token=${devResetMail.token}`);
-                    }}
-                    className="w-full py-1.5 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <span>Proceed with Reset Token</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
 
               <Button
                 variant="outline"

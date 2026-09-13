@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+import { PLANS_CONFIG, PlanConfig } from './config/plans.config';
 
 export interface DbUser {
   id: string;
@@ -141,7 +143,28 @@ export interface DbScan {
   tags?: string[];
   madeForKids?: boolean;
   language?: string;
-  status: 'DRAFT' | 'QUEUED' | 'VALIDATING' | 'INGESTING' | 'READY_FOR_ANALYSIS' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  channelTitle?: string;
+  youtubeVideoId?: string;
+  publishedAt?: string;
+  tagsUnavailable?: boolean;
+  metadata?: any;
+  status:
+    | 'DRAFT'
+    | 'QUEUED'
+    | 'VALIDATING'
+    | 'FETCHING_METADATA'
+    | 'ACQUIRING_MEDIA'
+    | 'EXTRACTING_AUDIO'
+    | 'TRANSCRIBING'
+    | 'ANALYZING'
+    | 'VALIDATING_REPORT'
+    | 'INGESTING'
+    | 'READY_FOR_ANALYSIS'
+    | 'PROCESSING'
+    | 'COMPLETED'
+    | 'FAILED'
+    | 'CANCELLED';
+  stage?: string;
   config: {
     checkCommunityGuidelines: boolean;
     checkAdvertiserSuitability: boolean;
@@ -169,6 +192,11 @@ export interface DbScan {
     youtubeVideoId?: string;
     youtubeUrl?: string;
     channelTitle?: string;
+    channelId?: string;
+    publishedAt?: string;
+    category?: string;
+    durationFormatted?: string;
+    tagsUnavailable?: boolean;
     resolution?: string;
     storagePath?: string;
     format?: string;
@@ -177,7 +205,16 @@ export interface DbScan {
   ingestionJobId?: string;
   progressPercent: number;
   currentStepMessage?: string;
+  errorCode?: string;
   errorMessage?: string;
+  errorDetails?: {
+    code: string;
+    message: string;
+    reason?: string;
+    action?: string;
+    retryable?: boolean;
+  };
+  attempts?: number;
   overallRisk: 'LOW' | 'REVIEW_REQUIRED' | 'IMPORTANT' | 'INSUFFICIENT_DATA';
   initiatedById: string;
   startedAt?: string;
@@ -329,6 +366,101 @@ export interface DbPreScanReport {
   updatedAt: string;
 }
 
+export interface DbPlan {
+  id: string;
+  key: 'FREE' | 'PRO' | 'BUSINESS';
+  name: string;
+  description: string;
+  monthlyPrice: number;
+  currency: string;
+  scanLimit: number;
+  maxVideoDurationSeconds: number;
+  maxMembers: number;
+  features: string[];
+  isActive: boolean;
+  displayOrder: number;
+  badge?: string;
+  isPopular?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DbSubscription {
+  id: string;
+  workspaceId: string;
+  planId: string;
+  planKey: 'FREE' | 'PRO' | 'BUSINESS';
+  status: 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED' | 'INCOMPLETE' | 'UNPAID' | 'NONE';
+  billingProvider: 'NONE' | 'STRIPE';
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DbUsageRecord {
+  id: string;
+  workspaceId: string;
+  periodStart: string;
+  periodEnd: string;
+  scansUsed: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DbUsageEvent {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  scanId: string;
+  type: 'SCAN_CONSUMED' | 'SCAN_FAILED_REVERT';
+  units: number;
+  metadataJson?: string;
+  createdAt: string;
+}
+
+export interface DbInvoice {
+  id: string;
+  workspaceId: string;
+  stripeInvoiceId: string;
+  stripeSubscriptionId?: string;
+  stripeCustomerId?: string;
+  number?: string;
+  amountPaid: number; // in cents
+  amountDue: number; // in cents
+  currency: string;
+  status: 'paid' | 'open' | 'void' | 'uncollectible' | 'draft';
+  hostedInvoiceUrl?: string;
+  invoicePdf?: string;
+  periodStart: string;
+  periodEnd: string;
+  paidAt?: string;
+  createdAt: string;
+}
+
+export interface DbProcessedStripeEvent {
+  id: string;
+  eventId: string;
+  eventType: string;
+  processedAt: string;
+}
+
+export interface DbFindingReview {
+  id: string;
+  scanId: string;
+  findingId: string;
+  organizationId: string;
+  reviewStatus: 'OPEN' | 'REVIEWED' | 'NEEDS_EDIT' | 'NOT_APPLICABLE';
+  creatorNote?: string;
+  reviewedByUserId?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DatabaseSchema {
   users: DbUser[];
   sessions: DbSession[];
@@ -347,6 +479,13 @@ export interface DatabaseSchema {
   analysisJobs: DbAnalysisJob[];
   transcripts: DbTranscript[];
   preScanReports: DbPreScanReport[];
+  findingReviews: DbFindingReview[];
+  plans: DbPlan[];
+  subscriptions: DbSubscription[];
+  usageRecords: DbUsageRecord[];
+  usageEvents: DbUsageEvent[];
+  invoices: DbInvoice[];
+  processedStripeEvents: DbProcessedStripeEvent[];
 }
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -370,6 +509,13 @@ const INITIAL_DB: DatabaseSchema = {
   analysisJobs: [],
   transcripts: [],
   preScanReports: [],
+  findingReviews: [],
+  plans: [],
+  subscriptions: [],
+  usageRecords: [],
+  usageEvents: [],
+  invoices: [],
+  processedStripeEvents: [],
 };
 
 class Database {
@@ -410,6 +556,66 @@ class Database {
     if (!this.data.auditLogs) this.data.auditLogs = [];
 
     let modified = false;
+
+    // 0. Seed default demo creator account if not present
+    if (!this.data.users.some((u) => u.email.toLowerCase() === 'creator@prescan.dev')) {
+      const salt = crypto.randomBytes(16).toString('hex');
+      const derivedKey = crypto.scryptSync('Password123!', salt, 64);
+      const now = new Date().toISOString();
+      const demoUserId = 'usr_demo_creator';
+      const demoOrgId = 'org_demo_workspace';
+
+      const demoUser: DbUser = {
+        id: demoUserId,
+        email: 'creator@prescan.dev',
+        displayName: 'PreScan Demo Creator',
+        fullName: 'PreScan Demo Creator',
+        emailVerified: true,
+        passwordHash: derivedKey.toString('hex'),
+        passwordSalt: salt,
+        status: 'ACTIVE',
+        defaultOrganizationId: demoOrgId,
+        termsAcceptedAt: now,
+        privacyAcceptedAt: now,
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now,
+      };
+      this.data.users.push(demoUser);
+
+      this.data.organizations.push({
+        id: demoOrgId,
+        name: "Creator's Channel Studio",
+        slug: 'creator-studio-demo',
+        ownerId: demoUserId,
+        createdById: demoUserId,
+        status: 'ACTIVE',
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      this.data.memberships.push({
+        id: 'mem_demo_creator',
+        organizationId: demoOrgId,
+        userId: demoUserId,
+        role: 'OWNER',
+        status: 'ACTIVE',
+        joinedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      if (!this.data.onboarding) this.data.onboarding = [];
+      this.data.onboarding.push({
+        userId: demoUserId,
+        step: 3,
+        status: 'COMPLETED',
+        completedAt: now,
+        updatedAt: now,
+      });
+
+      modified = true;
+    }
 
     // 1. Ensure every user has a default workspace & OWNER membership
     for (const user of this.data.users) {
@@ -488,6 +694,98 @@ class Database {
       }
     }
 
+    // 5. Ensure centralized Plans table is up-to-date
+    if (!this.data.plans) this.data.plans = [];
+    const planKeys: Array<'FREE' | 'PRO' | 'BUSINESS'> = ['FREE', 'PRO', 'BUSINESS'];
+    for (const pKey of planKeys) {
+      const pConfig = PLANS_CONFIG[pKey];
+      const existingPlanIdx = this.data.plans.findIndex((p) => p.key === pKey);
+      const nowIso = new Date().toISOString();
+      const planObj: DbPlan = {
+        id: pConfig.id,
+        key: pConfig.key,
+        name: pConfig.name,
+        description: pConfig.description,
+        monthlyPrice: pConfig.monthlyPrice,
+        currency: pConfig.currency,
+        scanLimit: pConfig.scanLimit,
+        maxVideoDurationSeconds: pConfig.maxVideoDurationSeconds,
+        maxMembers: pConfig.maxMembers,
+        features: [...pConfig.features],
+        isActive: pConfig.isActive,
+        displayOrder: pConfig.displayOrder,
+        badge: pConfig.badge,
+        isPopular: pConfig.isPopular,
+        createdAt: this.data.plans[existingPlanIdx]?.createdAt || nowIso,
+        updatedAt: nowIso,
+      };
+
+      if (existingPlanIdx !== -1) {
+        this.data.plans[existingPlanIdx] = planObj;
+      } else {
+        this.data.plans.push(planObj);
+        modified = true;
+      }
+    }
+
+    // 6. Ensure Subscriptions and Usage Records for all workspaces
+    if (!this.data.subscriptions) this.data.subscriptions = [];
+    if (!this.data.usageRecords) this.data.usageRecords = [];
+    if (!this.data.usageEvents) this.data.usageEvents = [];
+    if (!this.data.invoices) this.data.invoices = [];
+    if (!this.data.processedStripeEvents) this.data.processedStripeEvents = [];
+
+    const now = new Date();
+    const currentPeriodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    const currentPeriodEnd = new Date(nextMonth.getTime() - 1).toISOString();
+
+    for (const org of this.data.organizations) {
+      let sub = this.data.subscriptions.find((s) => s.workspaceId === org.id);
+      if (!sub) {
+        sub = {
+          id: `sub_${org.id}`,
+          workspaceId: org.id,
+          planId: PLANS_CONFIG.FREE.id,
+          planKey: 'FREE',
+          status: 'ACTIVE',
+          billingProvider: 'NONE',
+          currentPeriodStart,
+          currentPeriodEnd,
+          cancelAtPeriodEnd: false,
+          createdAt: org.createdAt || now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        this.data.subscriptions.push(sub);
+        modified = true;
+      }
+
+      // Ensure usage record for current period
+      let usage = this.data.usageRecords.find(
+        (u) => u.workspaceId === org.id && u.periodStart === sub!.currentPeriodStart
+      );
+      if (!usage) {
+        // Count scans in current period
+        const scansInPeriod = this.data.scans.filter(
+          (s) =>
+            s.organizationId === org.id &&
+            s.createdAt >= sub!.currentPeriodStart &&
+            s.createdAt <= sub!.currentPeriodEnd
+        );
+        usage = {
+          id: `usage_${org.id}_${now.getUTCFullYear()}_${now.getUTCMonth() + 1}`,
+          workspaceId: org.id,
+          periodStart: sub.currentPeriodStart,
+          periodEnd: sub.currentPeriodEnd,
+          scansUsed: scansInPeriod.length,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        this.data.usageRecords.push(usage);
+        modified = true;
+      }
+    }
+
     if (modified) {
       this.save();
     }
@@ -507,6 +805,10 @@ class Database {
   }
 
   // --- Users ---
+  findAllUsers(): DbUser[] {
+    return this.data.users || [];
+  }
+
   findUserById(id: string): DbUser | undefined {
     return this.data.users.find((u) => u.id === id);
   }
@@ -519,6 +821,47 @@ class Database {
     this.data.users.push(user);
     this.save();
     return user;
+  }
+
+  migrateUserId(oldUserId: string, newUserId: string) {
+    if (!oldUserId || !newUserId || oldUserId === newUserId) return;
+    const user = this.data.users.find((u) => u.id === oldUserId);
+    if (user) {
+      user.id = newUserId;
+    }
+    if (this.data.memberships) {
+      this.data.memberships.forEach((m) => {
+        if (m.userId === oldUserId) m.userId = newUserId;
+      });
+    }
+    if (this.data.organizations) {
+      this.data.organizations.forEach((o) => {
+        if (o.ownerId === oldUserId) o.ownerId = newUserId;
+        if (o.createdById === oldUserId) o.createdById = newUserId;
+      });
+    }
+    if (this.data.onboarding) {
+      const oldObs = this.data.onboarding.filter((o) => o.userId === oldUserId);
+      const newObExists = this.data.onboarding.some((o) => o.userId === newUserId);
+      if (!newObExists && oldObs.length > 0) {
+        oldObs.forEach((o) => {
+          o.userId = newUserId;
+        });
+      } else if (newObExists) {
+        this.data.onboarding = this.data.onboarding.filter((o) => o.userId !== oldUserId);
+      }
+    }
+    if (this.data.sessions) {
+      this.data.sessions.forEach((s) => {
+        if (s.userId === oldUserId) s.userId = newUserId;
+      });
+    }
+    if (this.data.scans) {
+      this.data.scans.forEach((s) => {
+        if (s.initiatedById === oldUserId) s.initiatedById = newUserId;
+      });
+    }
+    this.save();
   }
 
   updateUser(id: string, updates: Partial<DbUser>): DbUser | null {
@@ -1103,6 +1446,261 @@ class Database {
     return this.data.mailLog.find(
       (m) => m.to.toLowerCase() === email.toLowerCase() && (!type || m.type === type)
     );
+  }
+
+  // --- Plans ---
+  getPlans(): DbPlan[] {
+    if (!this.data.plans) this.data.plans = [];
+    return [...this.data.plans].sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  getPlanByKey(key: string): DbPlan | undefined {
+    if (!this.data.plans) this.data.plans = [];
+    return this.data.plans.find((p) => p.key === key);
+  }
+
+  getPlanById(id: string): DbPlan | undefined {
+    if (!this.data.plans) this.data.plans = [];
+    return this.data.plans.find((p) => p.id === id);
+  }
+
+  // --- Subscriptions ---
+  getSubscriptionByWorkspace(workspaceId: string): DbSubscription | undefined {
+    if (!this.data.subscriptions) this.data.subscriptions = [];
+    return this.data.subscriptions.find((s) => s.workspaceId === workspaceId);
+  }
+
+  createSubscription(subscription: DbSubscription): DbSubscription {
+    if (!this.data.subscriptions) this.data.subscriptions = [];
+    this.data.subscriptions.push(subscription);
+    this.save();
+    return subscription;
+  }
+
+  updateSubscription(id: string, updates: Partial<DbSubscription>): DbSubscription | null {
+    if (!this.data.subscriptions) this.data.subscriptions = [];
+    const idx = this.data.subscriptions.findIndex((s) => s.id === id);
+    if (idx === -1) return null;
+    this.data.subscriptions[idx] = {
+      ...this.data.subscriptions[idx],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    this.save();
+    return this.data.subscriptions[idx];
+  }
+
+  // --- Usage Records & Concurrency-Safe Usage Metering ---
+  getUsageRecord(workspaceId: string, periodStart: string): DbUsageRecord | undefined {
+    if (!this.data.usageRecords) this.data.usageRecords = [];
+    return this.data.usageRecords.find(
+      (u) => u.workspaceId === workspaceId && u.periodStart === periodStart
+    );
+  }
+
+  createOrGetUsageRecord(workspaceId: string, periodStart: string, periodEnd: string): DbUsageRecord {
+    if (!this.data.usageRecords) this.data.usageRecords = [];
+    let record = this.data.usageRecords.find(
+      (u) => u.workspaceId === workspaceId && u.periodStart === periodStart
+    );
+    if (!record) {
+      record = {
+        id: `usage_${workspaceId}_${Date.now()}`,
+        workspaceId,
+        periodStart,
+        periodEnd,
+        scansUsed: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.data.usageRecords.push(record);
+      this.save();
+    }
+    return record;
+  }
+
+  incrementUsage(
+    workspaceId: string,
+    periodStart: string,
+    periodEnd: string,
+    units: number = 1
+  ): DbUsageRecord {
+    if (!this.data.usageRecords) this.data.usageRecords = [];
+    let record = this.data.usageRecords.find(
+      (u) => u.workspaceId === workspaceId && u.periodStart === periodStart
+    );
+    if (!record) {
+      record = {
+        id: `usage_${workspaceId}_${Date.now()}`,
+        workspaceId,
+        periodStart,
+        periodEnd,
+        scansUsed: units,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.data.usageRecords.push(record);
+    } else {
+      record.scansUsed += units;
+      record.updatedAt = new Date().toISOString();
+    }
+    this.save();
+    return record;
+  }
+
+  getUsageRecordsByWorkspace(workspaceId: string): DbUsageRecord[] {
+    if (!this.data.usageRecords) this.data.usageRecords = [];
+    return this.data.usageRecords
+      .filter((u) => u.workspaceId === workspaceId)
+      .sort((a, b) => new Date(b.periodStart).getTime() - new Date(a.periodStart).getTime());
+  }
+
+  // --- Usage Events ---
+  recordUsageEvent(event: DbUsageEvent): DbUsageEvent {
+    if (!this.data.usageEvents) this.data.usageEvents = [];
+    this.data.usageEvents.unshift(event);
+    this.save();
+    return event;
+  }
+
+  getUsageEventsByWorkspace(workspaceId: string, limit = 50): DbUsageEvent[] {
+    if (!this.data.usageEvents) this.data.usageEvents = [];
+    return this.data.usageEvents
+      .filter((e) => e.workspaceId === workspaceId)
+      .slice(0, limit);
+  }
+
+  // --- Stripe Subscription Lookups ---
+  findSubscriptionByStripeCustomerId(customerId: string): DbSubscription | undefined {
+    if (!this.data.subscriptions) this.data.subscriptions = [];
+    return this.data.subscriptions.find((s) => s.providerCustomerId === customerId);
+  }
+
+  findSubscriptionByStripeSubId(subId: string): DbSubscription | undefined {
+    if (!this.data.subscriptions) this.data.subscriptions = [];
+    return this.data.subscriptions.find((s) => s.providerSubscriptionId === subId);
+  }
+
+  // --- Invoices ---
+  saveInvoice(invoice: DbInvoice): DbInvoice {
+    if (!this.data.invoices) this.data.invoices = [];
+    const existingIdx = this.data.invoices.findIndex((inv) => inv.stripeInvoiceId === invoice.stripeInvoiceId);
+    if (existingIdx !== -1) {
+      this.data.invoices[existingIdx] = {
+        ...this.data.invoices[existingIdx],
+        ...invoice,
+      };
+      this.save();
+      return this.data.invoices[existingIdx];
+    } else {
+      this.data.invoices.unshift(invoice);
+      this.save();
+      return invoice;
+    }
+  }
+
+  findInvoicesByWorkspace(workspaceId: string): DbInvoice[] {
+    if (!this.data.invoices) this.data.invoices = [];
+    return this.data.invoices
+      .filter((i) => i.workspaceId === workspaceId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  findInvoiceByStripeId(stripeInvoiceId: string): DbInvoice | undefined {
+    if (!this.data.invoices) this.data.invoices = [];
+    return this.data.invoices.find((i) => i.stripeInvoiceId === stripeInvoiceId);
+  }
+
+  // --- Webhook Idempotency ---
+  isStripeEventProcessed(eventId: string): boolean {
+    if (!this.data.processedStripeEvents) this.data.processedStripeEvents = [];
+    return this.data.processedStripeEvents.some((e) => e.eventId === eventId);
+  }
+
+  recordStripeEvent(eventId: string, eventType: string): void {
+    if (!this.data.processedStripeEvents) this.data.processedStripeEvents = [];
+    if (!this.isStripeEventProcessed(eventId)) {
+      this.data.processedStripeEvents.unshift({
+        id: `ev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        eventId,
+        eventType,
+        processedAt: new Date().toISOString(),
+      });
+      // Cap at last 500 events
+      if (this.data.processedStripeEvents.length > 500) {
+        this.data.processedStripeEvents = this.data.processedStripeEvents.slice(0, 500);
+      }
+      this.save();
+    }
+  }
+
+  // --- Finding Reviews ---
+  findFindingReviewsByScanId(scanId: string): DbFindingReview[] {
+    if (!this.data.findingReviews) this.data.findingReviews = [];
+    return this.data.findingReviews.filter((r) => r.scanId === scanId);
+  }
+
+  upsertFindingReview(review: {
+    scanId: string;
+    findingId: string;
+    organizationId: string;
+    reviewStatus: 'OPEN' | 'REVIEWED' | 'NEEDS_EDIT' | 'NOT_APPLICABLE';
+    creatorNote?: string;
+    reviewedByUserId?: string;
+  }): DbFindingReview {
+    if (!this.data.findingReviews) this.data.findingReviews = [];
+    const now = new Date().toISOString();
+    const existingIdx = this.data.findingReviews.findIndex(
+      (r) => r.scanId === review.scanId && r.findingId === review.findingId
+    );
+
+    if (existingIdx !== -1) {
+      const updated: DbFindingReview = {
+        ...this.data.findingReviews[existingIdx],
+        reviewStatus: review.reviewStatus,
+        creatorNote: review.creatorNote !== undefined ? review.creatorNote : this.data.findingReviews[existingIdx].creatorNote,
+        reviewedByUserId: review.reviewedByUserId || this.data.findingReviews[existingIdx].reviewedByUserId,
+        reviewedAt: now,
+        updatedAt: now,
+      };
+      this.data.findingReviews[existingIdx] = updated;
+      this.save();
+      return updated;
+    } else {
+      const newRecord: DbFindingReview = {
+        id: `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        scanId: review.scanId,
+        findingId: review.findingId,
+        organizationId: review.organizationId,
+        reviewStatus: review.reviewStatus,
+        creatorNote: review.creatorNote || '',
+        reviewedByUserId: review.reviewedByUserId,
+        reviewedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      };
+      this.data.findingReviews.push(newRecord);
+      this.save();
+      return newRecord;
+    }
+  }
+
+  // --- Admin Stats Queries ---
+  getAllUsersCount(): number {
+    if (!this.data.users) return 0;
+    return this.data.users.length;
+  }
+
+  getAllScansCount(): number {
+    if (!this.data.scans) return 0;
+    return this.data.scans.length;
+  }
+
+  getRecentScans(limit = 10): DbScan[] {
+    if (!this.data.scans) return [];
+    return [...this.data.scans]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
   }
 }
 

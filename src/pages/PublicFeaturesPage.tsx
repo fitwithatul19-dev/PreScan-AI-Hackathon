@@ -57,8 +57,8 @@ export const PublicFeaturesPage: React.FC<PublicFeaturesPageProps> = ({ onNaviga
       icon: <Share2 className="w-5 h-5 text-neutral-900" />,
     },
     {
-      title: 'Multi-Channel Project Workspaces',
-      description: 'Group video scans by YouTube channel, series, podcast season, or client account with organized audit history.',
+      title: 'Dedicated Creator Workspaces',
+      description: 'Keep video scans organized with complete audit history and tenant-isolated storage.',
       icon: <Users className="w-5 h-5 text-neutral-900" />,
     },
     {

@@ -2,7 +2,6 @@ export const ROUTES = {
   HOME: '/',
   FEATURES: '/features',
   HOW_IT_WORKS: '/how-it-works',
-  PRICING: '/pricing',
   SECURITY: '/security',
   ABOUT: '/about',
   CONTACT: '/contact',
@@ -10,6 +9,7 @@ export const ROUTES = {
   TERMS: '/terms',
   LOGIN: '/login',
   SIGNUP: '/signup',
+  AUTH_CALLBACK: '/auth/callback',
   VERIFY_EMAIL: '/verify-email',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
@@ -19,13 +19,7 @@ export const ROUTES = {
   NEW_SCAN: '/app/new-scan',
   SCANS: '/app/scans',
   SCAN_DETAIL: (id: string) => `/app/scans/${id}`,
-  REPORTS: '/app/reports',
-  PROJECTS: '/app/projects',
-  TEAM: '/app/team',
-  INTEGRATIONS: '/app/integrations',
-  BILLING: '/app/billing',
   SETTINGS: '/app/settings',
-  DESIGN_SYSTEM: '/app/design-system',
 } as const;
 
 export type AppRoute = typeof ROUTES[keyof typeof ROUTES];

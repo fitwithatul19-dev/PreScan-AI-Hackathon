@@ -32,6 +32,18 @@ export interface User {
 }
 
 /**
+ * Canonical Application User Profile Model
+ */
+export interface UserProfile {
+  user_id: string;
+  full_name: string;
+  avatar_url?: string;
+  onboarding_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Multi-Tenant Organization / Workspace Model
  */
 export interface Organization {
@@ -39,10 +51,18 @@ export interface Organization {
   name: string;
   slug: string;
   logoUrl?: string;
+  ownerId?: string;
   createdById: string;
+  status?: 'ACTIVE' | 'DEACTIVATED';
+  role?: MembershipRole | string;
+  memberCount?: number;
+  owner?: Partial<User>;
+  joinedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type Workspace = Organization;
 
 /**
  * User Membership in an Organization with Role-Based Access
@@ -51,11 +71,17 @@ export interface Membership {
   id: string;
   organizationId: string;
   userId: string;
-  role: MembershipRole;
+  role: MembershipRole | 'OWNER' | 'ADMIN' | 'MEMBER' | 'EDITOR' | 'VIEWER';
+  status?: 'ACTIVE' | 'SUSPENDED';
   invitedBy?: string;
+  user?: Partial<User>;
+  isOwner?: boolean;
   joinedAt: string;
+  createdAt?: string;
   updatedAt: string;
 }
+
+export type WorkspaceMember = Membership;
 
 /**
  * Team Invitation Model
@@ -64,11 +90,25 @@ export interface TeamInvitation {
   id: string;
   organizationId: string;
   email: string;
-  role: MembershipRole;
-  token: string;
-  status: InvitationStatus;
-  invitedById: string;
+  role: MembershipRole | 'ADMIN' | 'MEMBER';
+  token?: string;
+  status: InvitationStatus | 'PENDING' | 'ACCEPTED' | 'CANCELLED' | 'EXPIRED';
+  invitedById?: string;
+  invitedBy?: Partial<User>;
   expiresAt: string;
+  createdAt: string;
+  acceptedAt?: string;
+}
+
+export interface WorkspaceAuditLog {
+  id: string;
+  organizationId: string;
+  actorUserId: string;
+  action: string;
+  targetResourceType?: string;
+  targetResourceId?: string;
+  metadataJson?: string;
+  actor?: Partial<User>;
   createdAt: string;
 }
 
@@ -88,7 +128,7 @@ export interface Project {
 }
 
 /**
- * Scan Source Identification Types (Phase 02 Modification)
+ * Scan Source Identification Types
  */
 export type ScanSourceType = 'file' | 'youtube_url' | 'youtube_connection';
 
@@ -217,6 +257,7 @@ export interface Scan {
   madeForKids?: boolean;
   language?: string;
   status: ScanStatus;
+  stage?: string;
   config: ScanConfig;
   sourceType?: ScanSourceType;
   source?: ScanSource;
@@ -224,7 +265,16 @@ export interface Scan {
   ingestionJobId?: string;
   progressPercent: number;
   currentStepMessage?: string;
+  errorCode?: string;
   errorMessage?: string;
+  errorDetails?: {
+    code: string;
+    message: string;
+    reason?: string;
+    action?: string;
+    retryable?: boolean;
+  };
+  attempts?: number;
   overallRisk: RiskLevel;
   initiatedById: string;
   startedAt?: string;

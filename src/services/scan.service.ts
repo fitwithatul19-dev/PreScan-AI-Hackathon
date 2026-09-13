@@ -1,5 +1,5 @@
 import { Scan, IngestionJob, IngestionLog } from '../types/models';
-import { apiFetch, getStoredToken } from '../lib/api';
+import { apiFetch, getStoredToken, getValidAuthToken, getStoredWorkspaceId, getApiUrl } from '../lib/api';
 
 export interface ScanListResponse {
   scans: Scan[];
@@ -19,11 +19,18 @@ export interface YouTubeValidationResponse {
   normalizedUrl?: string;
   error?: string;
   metadata?: {
-    title: string;
-    authorName: string;
-    thumbnailUrl: string;
-    providerUrl: string;
-    videoId: string;
+    title?: string;
+    authorName?: string;
+    thumbnailUrl?: string;
+    providerUrl?: string;
+    videoId?: string;
+    description?: string;
+    tags?: string[];
+    category?: string;
+    channelId?: string;
+    durationSeconds?: number;
+    durationFormatted?: string;
+    tagsUnavailable?: boolean;
   };
 }
 
@@ -95,14 +102,23 @@ export const ScanService = {
     formData: FormData,
     onProgress?: (progressPercent: number) => void
   ): Promise<{ scan: Scan; job: IngestionJob }> {
+    const token = (await getValidAuthToken()) || getStoredToken();
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/scans/upload');
+      xhr.open('POST', getApiUrl('/api/scans/upload'));
       xhr.withCredentials = true;
 
-      const token = getStoredToken();
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        if (token.startsWith('demo_')) {
+          xhr.setRequestHeader('x-demo-user', token.replace('demo_', ''));
+        }
+      }
+
+      const activeWsId = getStoredWorkspaceId();
+      if (activeWsId) {
+        xhr.setRequestHeader('x-workspace-id', activeWsId);
+        xhr.setRequestHeader('x-organization-id', activeWsId);
       }
 
       if (onProgress && xhr.upload) {
@@ -116,6 +132,11 @@ export const ScanService = {
 
       xhr.onload = () => {
         try {
+          const contentType = xhr.getResponseHeader('content-type') || '';
+          if (contentType.includes('text/html')) {
+            reject(new Error('PreScan backend service is unavailable or returned an HTML fallback response. Please verify VITE_API_BASE_URL points to your deployed backend.'));
+            return;
+          }
           const data = JSON.parse(xhr.responseText);
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(data);
@@ -123,12 +144,12 @@ export const ScanService = {
             reject(new Error(data.error || 'Upload failed.'));
           }
         } catch {
-          reject(new Error('Invalid response from server.'));
+          reject(new Error('Invalid response from PreScan backend server during file upload.'));
         }
       };
 
       xhr.onerror = () => {
-        reject(new Error('Network error during file upload.'));
+        reject(new Error('Unable to connect to PreScan backend server during file upload. Please check network connection and backend CORS configuration.'));
       };
 
       xhr.send(formData);
@@ -213,6 +234,35 @@ export const ScanService = {
   },
 
   /**
+   * Submit built-in test sample fixture
+   */
+  async submitSampleScan(sampleId: string, organizationId?: string): Promise<{ scan: Scan; job: IngestionJob }> {
+    const res = await apiFetch('/api/scans/sample', {
+      method: 'POST',
+      body: JSON.stringify({ sampleId, organizationId }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to submit test sample scan.');
+    }
+    return data;
+  },
+
+  /**
+   * Retry an existing failed or incomplete scan
+   */
+  async retryScan(id: string): Promise<{ success: boolean; scan: Scan }> {
+    const res = await apiFetch(`/api/scans/${id}/retry`, {
+      method: 'POST',
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to retry scan.');
+    }
+    return data;
+  },
+
+  /**
    * Trigger or retry PreScan AI analysis on scan
    */
   async startScanAnalysis(id: string): Promise<any> {
@@ -239,13 +289,45 @@ export const ScanService = {
   },
 
   /**
-   * Fetch persisted PreScan report and transcript
+   * Fetch persisted PreScan report, transcript and reviews
    */
-  async getScanReport(id: string): Promise<{ scan: Scan; report: any; transcript: any }> {
+  async getScanReport(id: string): Promise<{ scan: Scan; report: any; transcript: any; reviews?: any[] }> {
     const res = await apiFetch(`/api/scans/${id}/report`);
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Failed to fetch scan report.');
+    }
+    return data;
+  },
+
+  /**
+   * Fetch finding review states and notes for a scan
+   */
+  async getScanReviews(id: string): Promise<{ reviews: any[] }> {
+    const res = await apiFetch(`/api/scans/${id}/reviews`);
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to fetch finding reviews.');
+    }
+    return data;
+  },
+
+  /**
+   * Update finding review state / creator note
+   */
+  async updateFindingReview(
+    scanId: string,
+    findingId: string,
+    reviewStatus: 'OPEN' | 'REVIEWED' | 'NEEDS_EDIT' | 'NOT_APPLICABLE',
+    creatorNote?: string
+  ): Promise<{ success: boolean; review: any }> {
+    const res = await apiFetch(`/api/scans/${scanId}/reviews/${findingId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ reviewStatus, creatorNote }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to update finding review.');
     }
     return data;
   },

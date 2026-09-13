@@ -66,7 +66,9 @@ router.post('/complete', requireAuth, requireVerified, (req: Request, res: Respo
       id: orgId,
       name: resolvedWorkspaceName.trim(),
       slug: `${slug}-${Math.floor(1000 + Math.random() * 9000)}`,
+      ownerId: user.id,
       createdById: user.id,
+      status: 'ACTIVE',
       createdAt: now,
       updatedAt: now,
     });
@@ -77,7 +79,9 @@ router.post('/complete', requireAuth, requireVerified, (req: Request, res: Respo
       organizationId: org.id,
       userId: user.id,
       role: 'OWNER',
+      status: 'ACTIVE',
       joinedAt: now,
+      createdAt: now,
       updatedAt: now,
     });
 
@@ -90,10 +94,17 @@ router.post('/complete', requireAuth, requireVerified, (req: Request, res: Respo
       organizationId: org.id,
       actorUserId: user.id,
       action: 'WORKSPACE_CREATED',
+      targetResourceType: 'WORKSPACE',
+      targetResourceId: org.id,
       metadataJson: JSON.stringify({ name: org.name }),
       ipAddress: req.ip,
       createdAt: now,
     });
+  } else {
+    // If org exists, update name if specified
+    if (workspaceName && typeof workspaceName === 'string' && workspaceName.trim()) {
+      org = db.updateOrganization(org.id, { name: workspaceName.trim() }) || org;
+    }
   }
 
   // Finalize onboarding record
