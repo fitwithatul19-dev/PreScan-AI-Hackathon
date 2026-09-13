@@ -11,7 +11,6 @@ import authRoutes from './server/routes/auth.routes';
 import onboardingRoutes from './server/routes/onboarding.routes';
 import userRoutes from './server/routes/user.routes';
 import workspaceRoutes from './server/routes/workspace.routes';
-import invitationRoutes from './server/routes/invitation.routes';
 import scanRoutes from './server/routes/scan.routes';
 import billingRoutes from './server/routes/billing.routes';
 import { ScanPipelineService } from './server/services/scanPipeline.service';
@@ -70,7 +69,6 @@ async function startServer() {
   app.use('/api/onboarding', onboardingRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/workspaces', workspaceRoutes);
-  app.use('/api/invitations', invitationRoutes);
   app.use('/api/scans', scanRoutes);
   app.use('/api/billing', billingRoutes);
 

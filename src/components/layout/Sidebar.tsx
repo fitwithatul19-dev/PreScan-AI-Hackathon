@@ -5,10 +5,8 @@ import {
   History,
   FileCheck2,
   FolderKanban,
-  Users2,
   Settings,
   Sparkles,
-  Palette,
   X,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
@@ -72,25 +70,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const managementNavItems: NavItem[] = [
     {
-      id: 'team',
-      label: 'Team & Access',
-      href: '/app/team',
-      icon: <Users2 className="w-4 h-4" />,
-    },
-    {
       id: 'settings',
       label: 'Settings',
       href: '/app/settings',
       icon: <Settings className="w-4 h-4" />,
-    },
-  ];
-
-  const developerNavItems: NavItem[] = [
-    {
-      id: 'design-system',
-      label: 'Design System & UI',
-      href: '/app/design-system',
-      icon: <Palette className="w-4 h-4" />,
     },
   ];
 
@@ -204,16 +187,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div>
             <div className="px-3 mb-2 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
-              Workspace Management
+              Settings & Preferences
             </div>
             {renderNavList(managementNavItems)}
-          </div>
-
-          <div>
-            <div className="px-3 mb-2 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
-              Foundation Inspection
-            </div>
-            {renderNavList(developerNavItems)}
           </div>
         </div>
 

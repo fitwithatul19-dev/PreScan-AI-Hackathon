@@ -9,9 +9,7 @@ import { ScansPage } from '../pages/ScansPage';
 import { ScanDetailPage } from '../pages/ScanDetailPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { ProjectsPage } from '../pages/ProjectsPage';
-import { TeamPage } from '../pages/TeamPage';
 import { SettingsPage } from '../pages/SettingsPage';
-import { DesignSystemPage } from '../pages/DesignSystemPage';
 
 // Public Marketing Pages
 import { PublicLandingPage } from '../pages/PublicLandingPage';
@@ -31,7 +29,6 @@ import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '../pages/ResetPasswordPage';
 import { OnboardingPage } from '../pages/OnboardingPage';
 import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
-import { AcceptInvitationPage } from '../pages/AcceptInvitationPage';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
@@ -327,18 +324,6 @@ export const Router: React.FC = () => {
     return <ResetPasswordPage onNavigate={navigate} />;
   }
 
-  // Invite Token Page (/invite/:token or /invite?token=...)
-  if (routePath.startsWith('/invite')) {
-    let token = '';
-    if (routePath.startsWith('/invite/')) {
-      token = routePath.replace('/invite/', '').split('?')[0];
-    } else {
-      const urlParams = new URLSearchParams(window.location.search);
-      token = urlParams.get('token') || '';
-    }
-    return <AcceptInvitationPage token={token} onNavigate={navigate} />;
-  }
-
   if (routePath === ROUTES.ONBOARDING) {
     if (authStatus === 'AUTHENTICATED_READY') {
       return (
@@ -376,12 +361,8 @@ export const Router: React.FC = () => {
           return <ReportsPage onNavigate={navigate} />;
         case ROUTES.PROJECTS:
           return <ProjectsPage onNavigate={navigate} />;
-        case ROUTES.TEAM:
-          return <TeamPage onNavigate={navigate} />;
         case ROUTES.SETTINGS:
           return <SettingsPage onNavigate={navigate} />;
-        case ROUTES.DESIGN_SYSTEM:
-          return <DesignSystemPage onNavigate={navigate} />;
         default:
           return <DashboardPage onNavigate={navigate} />;
       }

@@ -683,7 +683,7 @@ export const PreScanReportView: React.FC<PreScanReportViewProps> = ({
               </div>
 
               <div className="pt-2 text-[11px] text-neutral-400 leading-relaxed italic border-t border-neutral-800">
-                Disclaimer: Completing this workflow checklist confirms team review. It does not guarantee YouTube algorithm approval or policy immunity.
+                Disclaimer: Completing this workflow checklist confirms pre-upload review. It does not guarantee YouTube algorithm approval or policy immunity.
               </div>
             </CardContent>
           </Card>
@@ -954,7 +954,7 @@ export const PreScanReportView: React.FC<PreScanReportViewProps> = ({
                         {/* Creator Note Editor */}
                         <div className="space-y-1.5">
                           <label className="block text-[11px] font-bold text-neutral-600">
-                            Creator / Team Note:
+                            Creator Note:
                           </label>
                           <div className="flex gap-2">
                             <input
@@ -1002,7 +1002,7 @@ export const PreScanReportView: React.FC<PreScanReportViewProps> = ({
                     Creator Action & Resolution Hub
                   </CardTitle>
                   <CardDescription className="text-xs text-neutral-600 mt-0.5">
-                    Track internal team resolutions and creator notes for each flagged item prior to publication.
+                    Track resolutions and creator notes for each flagged item prior to publication.
                   </CardDescription>
                 </div>
                 <div className="text-right shrink-0">
@@ -1024,7 +1024,7 @@ export const PreScanReportView: React.FC<PreScanReportViewProps> = ({
               {reviewedFindingsCount === totalFindings && totalFindings > 0 ? (
                 <div className="p-3 rounded-lg bg-emerald-100 border border-emerald-300 text-xs text-emerald-900 flex items-center gap-2 font-medium">
                   <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span>All detected findings have been reviewed by your team.</span>
+                  <span>All detected findings have been reviewed.</span>
                 </div>
               ) : (
                 <p className="text-xs text-neutral-600">

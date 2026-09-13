@@ -14,8 +14,6 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
   ONBOARDING: '/onboarding',
-  INVITE_ROOT: '/invite',
-  INVITE: (token: string) => `/invite/${token}`,
   APP_ROOT: '/app',
   DASHBOARD: '/app/dashboard',
   NEW_SCAN: '/app/new-scan',
@@ -23,9 +21,7 @@ export const ROUTES = {
   SCAN_DETAIL: (id: string) => `/app/scans/${id}`,
   REPORTS: '/app/reports',
   PROJECTS: '/app/projects',
-  TEAM: '/app/team',
   SETTINGS: '/app/settings',
-  DESIGN_SYSTEM: '/app/design-system',
 } as const;
 
 export type AppRoute = typeof ROUTES[keyof typeof ROUTES];

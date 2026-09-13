@@ -229,7 +229,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
                 label="Workspace Name"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                helperText="Used in policy reports, team invitations, and audit events."
+                helperText="Used in policy reports and audit events."
               />
 
               <Input

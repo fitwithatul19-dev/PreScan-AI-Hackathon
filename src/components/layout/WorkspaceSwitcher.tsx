@@ -165,7 +165,7 @@ export const WorkspaceSwitcher: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => !isCreating && setIsCreateModalOpen(false)}
         title="Create Workspace"
-        description="Workspaces provide dedicated, isolated environments for team members, scans, and reports."
+        description="Workspaces provide dedicated, isolated environments for your scans, projects, and reports."
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
           <Input
